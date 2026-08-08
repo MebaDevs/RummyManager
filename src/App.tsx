@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './pages/HomePage';
@@ -6,7 +6,7 @@ import { NewGamePage } from './pages/NewGamePage';
 import { ActiveGamePage } from './pages/ActiveGamePage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { Menu, X, Flame } from 'lucide-react';
+import { Menu, X, Flame, Maximize, Minimize } from 'lucide-react';
 import './styles/index.css';
 
 const MainContent: React.FC = () => {
@@ -35,8 +35,25 @@ const MainContent: React.FC = () => {
 };
 
 export const AppLayout: React.FC = () => {
-  const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { setCurrentPage } = useGame();
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%', flexDirection: 'column' }}>
@@ -83,23 +100,44 @@ export const AppLayout: React.FC = () => {
           </span>
         </div>
 
-        <button
-          onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-          className="btn btn-secondary"
-          style={{
-            width: 40,
-            height: 40,
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 'var(--radius-md)',
-            flexShrink: 0,
-          }}
-          aria-label={isMobileNavOpen ? 'Cerrar Menú' : 'Abrir Menú'}
-        >
-          {isMobileNavOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={toggleFullscreen}
+            className="btn btn-secondary"
+            style={{
+              width: 40,
+              height: 40,
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-md)',
+              flexShrink: 0,
+            }}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa (Ocultar barra URL)'}
+            aria-label="Pantalla Completa"
+          >
+            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+          </button>
+
+          <button
+            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            className="btn btn-secondary"
+            style={{
+              width: 40,
+              height: 40,
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-md)',
+              flexShrink: 0,
+            }}
+            aria-label={isMobileNavOpen ? 'Cerrar Menú' : 'Abrir Menú'}
+          >
+            {isMobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </header>
 
       <div style={{ display: 'flex', flex: 1, width: '100%' }}>

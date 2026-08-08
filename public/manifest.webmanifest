@@ -1,0 +1,17 @@
+{
+  "short_name": "Rummy",
+  "name": "Rummy Timer",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#080a0f",
+  "theme_color": "#080a0f",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "portrait"
+}
