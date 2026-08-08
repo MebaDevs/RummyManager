@@ -52,6 +52,10 @@ export function useRummyEngine(initialGame?: Game | null) {
     return engineRef.current.startNextRound();
   }, []);
 
+  const reorderPlayers = useCallback((newOrderedIds: string[]) => {
+    return engineRef.current.reorderPlayers(newOrderedIds);
+  }, []);
+
   const getCumulativeScores = useCallback(() => {
     return engineRef.current.getCumulativeScores();
   }, []);
@@ -67,6 +71,7 @@ export function useRummyEngine(initialGame?: Game | null) {
     togglePause,
     finishRound,
     startNextRound,
+    reorderPlayers,
     getCumulativeScores,
   };
 }

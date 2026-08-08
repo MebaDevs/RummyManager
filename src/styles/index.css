@@ -145,6 +145,8 @@ h1, h2, h3, h4, .font-display {
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .btn:active {
@@ -382,10 +384,22 @@ h1, h2, h3, h4, .font-display {
 @media (max-width: 600px) {
   .glass-panel {
     border-radius: var(--radius-md);
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .btn-lg {
-    padding: 12px 20px;
-    font-size: 15px;
+    padding: 12px 16px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .btn {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .bottom-toolbar-container .btn {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .players-grid-mobile {
     grid-template-columns: 1fr !important;

@@ -55,13 +55,21 @@ export const NewGamePage: React.FC = () => {
     setErrorMsg('');
   };
 
-  const handleSetInitialPlayer = (id: string) => {
-    setPlayers(
-      players.map((p) => ({
-        ...p,
-        isInitialPlayer: p.id === id,
-      }))
-    );
+  const handleMovePlayer = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= players.length) return;
+
+    const copy = [...players];
+    const temp = copy[index];
+    copy[index] = copy[newIndex];
+    copy[newIndex] = temp;
+
+    // Ensure initial player status follows first item if needed
+    if (!copy.some((p) => p.isInitialPlayer)) {
+      copy[0].isInitialPlayer = true;
+    }
+
+    setPlayers(copy);
   };
 
   const handleStartGame = async () => {
@@ -150,24 +158,61 @@ export const NewGamePage: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
-              {players.map((player) => (
+              {players.map((player, index) => (
                 <div
                   key={player.id}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '12px 16px',
+                    padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
                     background: player.isInitialPlayer ? 'rgba(155, 92, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                     border: player.isInitialPlayer ? '1px solid var(--accent-purple)' : '1px solid var(--panel-border)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <button
+                        type="button"
+                        onClick={() => handleMovePlayer(index, 'up')}
+                        disabled={index === 0}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: index === 0 ? 'rgba(255,255,255,0.15)' : 'var(--text-secondary)',
+                          cursor: index === 0 ? 'default' : 'pointer',
+                          fontSize: 10,
+                          lineHeight: 1,
+                          padding: 2,
+                        }}
+                        title="Mover arriba"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMovePlayer(index, 'down')}
+                        disabled={index === players.length - 1}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: index === players.length - 1 ? 'rgba(255,255,255,0.15)' : 'var(--text-secondary)',
+                          cursor: index === players.length - 1 ? 'default' : 'pointer',
+                          fontSize: 10,
+                          lineHeight: 1,
+                          padding: 2,
+                        }}
+                        title="Mover abajo"
+                      >
+                        ▼
+                      </button>
+                    </div>
+
                     <div
                       style={{
-                        width: 34,
-                        height: 34,
+                        width: 32,
+                        height: 32,
                         borderRadius: '50%',
                         background: player.avatarColor,
                         display: 'flex',
@@ -192,15 +237,6 @@ export const NewGamePage: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {!player.isInitialPlayer && (
-                      <button
-                        onClick={() => handleSetInitialPlayer(player.id)}
-                        className="btn btn-secondary btn-sm"
-                        title="Marcar como jugador inicial"
-                      >
-                        Inicia
-                      </button>
-                    )}
                     <button
                       onClick={() => handleRemovePlayer(player.id)}
                       className="btn btn-secondary btn-sm"

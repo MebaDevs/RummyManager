@@ -6,14 +6,17 @@ import { BottomToolbar } from '../components/BottomToolbar';
 import { ScoreboardDrawer } from '../components/ScoreboardDrawer';
 import { RoundSummaryModal } from '../components/RoundSummaryModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { ReorderPlayersModal } from '../components/ReorderPlayersModal';
 import { usePreciseTimer } from '../hooks/usePreciseTimer';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
 import { useRummyEngine } from '../hooks/useRummyEngine';
+import { Users } from 'lucide-react';
 
 export const ActiveGamePage: React.FC = () => {
   const { activeGame, updateGameState, quitCurrentGame, setCurrentPage } = useGame();
   const [isScoreboardOpen, setIsScoreboardOpen] = useState(false);
   const [isRoundModalOpen, setIsRoundModalOpen] = useState(false);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [showErrorConfirmModal, setShowErrorConfirmModal] = useState(false);
   const [showQuitConfirmModal, setShowQuitConfirmModal] = useState(false);
 
@@ -26,6 +29,7 @@ export const ActiveGamePage: React.FC = () => {
     togglePause,
     finishRound,
     startNextRound,
+    reorderPlayers,
   } = useRummyEngine(activeGame);
 
   // Keep global audio notification settings synced
@@ -91,12 +95,25 @@ export const ActiveGamePage: React.FC = () => {
     await quitCurrentGame();
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  const handleOpenDeclareWinner = () => {
+    scrollToTop();
+    setIsRoundModalOpen(true);
+  };
+
   const handleFinishRoundAction = (winnerPlayerId: string, handPointsMap: Record<string, number>) => {
+    scrollToTop();
     const updated = finishRound(winnerPlayerId, handPointsMap);
     updateGameState(updated);
   };
 
   const handleStartNextRoundAction = () => {
+    scrollToTop();
     const updated = startNextRound();
     updateGameState(updated);
   };
@@ -135,14 +152,21 @@ export const ActiveGamePage: React.FC = () => {
         />
       </div>
 
-      {/* Extra Round Completion Action */}
-      <div className="round-winner-btn-container" style={{ textAlign: 'center', marginTop: 12 }}>
+      {/* Extra Actions Bar (Round Winner & Reorder Players) */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 12 }}>
         <button
-          onClick={() => setIsRoundModalOpen(true)}
+          onClick={handleOpenDeclareWinner}
           className="btn btn-secondary btn-sm"
           style={{ borderRadius: 999 }}
         >
           🏆 Declarar Ganador de Ronda
+        </button>
+        <button
+          onClick={() => setIsReorderModalOpen(true)}
+          className="btn btn-secondary btn-sm"
+          style={{ borderRadius: 999 }}
+        >
+          <Users size={16} /> Reordenar Asientos
         </button>
       </div>
 
@@ -152,6 +176,17 @@ export const ActiveGamePage: React.FC = () => {
         isOpen={isScoreboardOpen}
         onClose={() => setIsScoreboardOpen(false)}
         onToggle={handleToggleScoreboard}
+      />
+
+      {/* Modal de Reordenamiento de Asientos de Jugadores */}
+      <ReorderPlayersModal
+        isOpen={isReorderModalOpen}
+        players={game.players}
+        onClose={() => setIsReorderModalOpen(false)}
+        onSaveOrder={(newIds) => {
+          const updated = reorderPlayers(newIds);
+          updateGameState(updated);
+        }}
       />
 
       {/* Modal de Cierre de Ronda */}

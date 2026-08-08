@@ -88,14 +88,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {message}
         </p>
 
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-          <button onClick={onCancel} className="btn btn-secondary" style={{ flex: 1 }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={onCancel} className="btn btn-secondary" style={{ flex: '1 1 120px' }}>
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
             className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`}
-            style={{ flex: 1 }}
+            style={{ flex: '1 1 120px' }}
           >
             {confirmText}
           </button>

@@ -348,6 +348,7 @@ export class RummyEngine {
 
   /**
    * Pause or Resume the current turn timer.
+   * Freezes accumulatedMs at the exact millisecond when pausing.
    */
   public togglePause(): Game {
     if (this.game.status !== 'playing' && this.game.status !== 'paused') {
@@ -355,9 +356,15 @@ export class RummyEngine {
     }
 
     const now = new Date().toISOString();
+    const nowMs = new Date(now).getTime();
+
     if (this.game.status === 'playing') {
       this.game.status = 'paused';
       if (this.game.currentTurn) {
+        if (this.game.currentTurn.startedAt) {
+          const runSegment = Math.max(0, nowMs - new Date(this.game.currentTurn.startedAt).getTime());
+          this.game.currentTurn.accumulatedMs += runSegment;
+        }
         this.game.currentTurn.status = 'paused';
         this.game.currentTurn.pausedAt = now;
       }
@@ -365,11 +372,8 @@ export class RummyEngine {
       this.game.status = 'playing';
       if (this.game.currentTurn) {
         this.game.currentTurn.status = 'running';
-        if (this.game.currentTurn.pausedAt) {
-          const pausedDuration = new Date(now).getTime() - new Date(this.game.currentTurn.pausedAt).getTime();
-          this.game.currentTurn.accumulatedMs += pausedDuration;
-          this.game.currentTurn.pausedAt = null;
-        }
+        this.game.currentTurn.startedAt = now;
+        this.game.currentTurn.pausedAt = null;
       }
     }
 
@@ -479,9 +483,9 @@ export class RummyEngine {
       };
     });
 
-    // Starting player: previous round winner, or rotate
-    const prevWinnerId = this.game.rounds[nextIndex - 1].winnerPlayerId;
-    const startingPlayerId = prevWinnerId || this.game.players[0].id;
+    // Sequential starting player rotation: Round 1 -> Player 0, Round 2 -> Player 1, Round 3 -> Player 2, etc.
+    const startingPlayerIndex = nextIndex % this.game.players.length;
+    const startingPlayerId = this.game.players[startingPlayerIndex].id;
     nextRound.playerStates[startingPlayerId].status = 'current_turn';
 
     const firstTurn: Turn = {
@@ -506,6 +510,33 @@ export class RummyEngine {
     this.logEvent('ROUND_START', `Inicio de la Ronda ${nextRound.number}: ${nextRound.objective.name}`, undefined, nextRound.number);
     this.logEvent('TURN_START', `Turno inicial de ${startingPlayer?.name}`, startingPlayerId, nextRound.number);
 
+    this.notify();
+    return this.getGame();
+  }
+
+  /**
+   * Reorder players during active game without breaking current turn or state.
+   */
+  public reorderPlayers(newOrderedIds: string[]): Game {
+    const playerMap = new Map(this.game.players.map((p) => [p.id, p]));
+    const reordered: Player[] = [];
+
+    newOrderedIds.forEach((id) => {
+      const p = playerMap.get(id);
+      if (p) reordered.push(p);
+    });
+
+    // Add any remaining players not in newOrderedIds
+    this.game.players.forEach((p) => {
+      if (!newOrderedIds.includes(p.id)) {
+        reordered.push(p);
+      }
+    });
+
+    this.game.players = reordered;
+    this.game.updatedAt = new Date().toISOString();
+
+    this.logEvent('GAME_START', 'Reordenamiento de asientos de jugadores aplicado.');
     this.notify();
     return this.getGame();
   }
