@@ -8,17 +8,29 @@ export function getPlayerTotalTimeMs(game: Game, playerId: string): number {
   let totalMs = 0;
   const nowMs = Date.now();
 
+  // Only the CURRENT active turn (matched by ID) gets the live running segment.
+  // All other turns contribute only their finalized accumulatedMs.
+  const activeTurnId = game.currentTurn?.id ?? null;
+
   game.rounds.forEach((round) => {
     round.turns.forEach((turn) => {
-      if (turn.playerId === playerId) {
-        let turnMs = turn.accumulatedMs || 0;
-        // If turn is currently running in an active game, add current running segment
-        if (turn.status === 'running' && turn.startedAt && game.status === 'playing') {
-          const runSegment = Math.max(0, nowMs - new Date(turn.startedAt).getTime());
-          turnMs += runSegment;
-        }
-        totalMs += turnMs;
+      if (turn.playerId !== playerId) return;
+
+      let turnMs = turn.accumulatedMs || 0;
+
+      // Add live segment ONLY for the one turn that is currently active
+      if (
+        activeTurnId !== null &&
+        turn.id === activeTurnId &&
+        turn.playerId === playerId &&
+        game.status === 'playing' &&
+        turn.startedAt
+      ) {
+        const runSegment = Math.max(0, nowMs - new Date(turn.startedAt).getTime());
+        turnMs += runSegment;
       }
+
+      totalMs += turnMs;
     });
   });
 
