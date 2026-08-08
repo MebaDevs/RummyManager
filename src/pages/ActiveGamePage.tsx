@@ -7,6 +7,7 @@ import { ScoreboardDrawer } from '../components/ScoreboardDrawer';
 import { RoundSummaryModal } from '../components/RoundSummaryModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ReorderPlayersModal } from '../components/ReorderPlayersModal';
+import { GameFinishedModal } from '../components/GameFinishedModal';
 import { usePreciseTimer } from '../hooks/usePreciseTimer';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
 import { useRummyEngine } from '../hooks/useRummyEngine';
@@ -196,6 +197,14 @@ export const ActiveGamePage: React.FC = () => {
         onClose={() => setIsRoundModalOpen(false)}
         onFinishRound={handleFinishRoundAction}
         onStartNextRound={handleStartNextRoundAction}
+      />
+
+      {/* Modal de Partida Finalizada */}
+      <GameFinishedModal
+        isOpen={game.status === 'finished'}
+        game={game}
+        onNewGame={() => setCurrentPage('new_game')}
+        onGoHome={() => setCurrentPage('home')}
       />
 
       {/* Confirmation Modal for +150 Game Error */}
