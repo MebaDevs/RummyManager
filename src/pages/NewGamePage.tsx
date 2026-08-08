@@ -16,8 +16,13 @@ export const NewGamePage: React.FC = () => {
   const [pastGames, setPastGames] = useState<GameSummary[]>([]);
   const [allPastPlayerNames, setAllPastPlayerNames] = useState<string[]>([]);
 
+<<<<<<< HEAD
   // Pointer-events + touch based drag-to-sort (no HTML5 DnD API)
   const { draggingIndex, overIndex, handleHandleMouseDown, handleHandleTouchStart, handleItemMouseEnter, setRowRef } = useSortable(
+=======
+  // Pointer-events based drag-to-sort (no HTML5 DnD API)
+  const { draggingIndex, overIndex, handleHandleMouseDown, handleItemMouseEnter } = useSortable(
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
     players,
     (reordered) => setPlayers(reordered.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 })))
   );
@@ -236,7 +241,10 @@ export const NewGamePage: React.FC = () => {
                 return (
                   <div
                     key={player.id}
+<<<<<<< HEAD
                     ref={(el) => setRowRef(index, el as HTMLElement | null)}
+=======
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
                     onMouseEnter={() => handleItemMouseEnter(index)}
                     style={{
                       display: 'flex',
@@ -264,15 +272,23 @@ export const NewGamePage: React.FC = () => {
                       {/* Drag Handle */}
                       <div
                         onMouseDown={() => handleHandleMouseDown(index)}
+<<<<<<< HEAD
                         onTouchStart={(e) => handleHandleTouchStart(e, index)}
+=======
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
                         style={{
                           color: 'var(--text-muted)',
                           cursor: 'grab',
                           display: 'flex',
                           alignItems: 'center',
+<<<<<<< HEAD
                           padding: '8px 4px',
                           flexShrink: 0,
                           touchAction: 'none',
+=======
+                          padding: '4px 2px',
+                          flexShrink: 0,
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
                         }}
                         title="Arrastra para reordenar"
                       >

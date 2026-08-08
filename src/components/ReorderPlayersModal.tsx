@@ -18,7 +18,11 @@ export const ReorderPlayersModal: React.FC<ReorderPlayersModalProps> = ({
 }) => {
   const [orderedList, setOrderedList] = useState<Player[]>(players);
 
+<<<<<<< HEAD
   const { draggingIndex, overIndex, handleHandleMouseDown, handleHandleTouchStart, handleItemMouseEnter, setRowRef } = useSortable(
+=======
+  const { draggingIndex, overIndex, handleHandleMouseDown, handleItemMouseEnter } = useSortable(
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
     orderedList,
     (reordered) => setOrderedList(reordered)
   );
@@ -81,7 +85,10 @@ export const ReorderPlayersModal: React.FC<ReorderPlayersModalProps> = ({
             return (
               <div
                 key={player.id}
+<<<<<<< HEAD
                 ref={(el) => setRowRef(idx, el as HTMLElement | null)}
+=======
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
                 onMouseEnter={() => handleItemMouseEnter(idx)}
                 style={{
                   display: 'flex',
@@ -100,8 +107,12 @@ export const ReorderPlayersModal: React.FC<ReorderPlayersModalProps> = ({
                 {/* Drag handle */}
                 <div
                   onMouseDown={() => handleHandleMouseDown(idx)}
+<<<<<<< HEAD
                   onTouchStart={(e) => handleHandleTouchStart(e, idx)}
                   style={{ color: 'var(--text-muted)', cursor: 'grab', display: 'flex', alignItems: 'center', flexShrink: 0, padding: '8px 4px', touchAction: 'none' }}
+=======
+                  style={{ color: 'var(--text-muted)', cursor: 'grab', display: 'flex', alignItems: 'center', flexShrink: 0, padding: '4px 2px' }}
+>>>>>>> 802d29080402ee4f73cf83aad327aa8b327db203
                   title="Arrastra para reordenar"
                 >
                   <GripVertical size={18} />
