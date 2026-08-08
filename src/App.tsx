@@ -85,12 +85,20 @@ export const AppLayout: React.FC = () => {
 
         <button
           onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-          className="btn btn-secondary btn-sm"
-          style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}
-          aria-label="Abrir Menú"
+          className="btn btn-secondary"
+          style={{
+            width: 40,
+            height: 40,
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-md)',
+            flexShrink: 0,
+          }}
+          aria-label={isMobileNavOpen ? 'Cerrar Menú' : 'Abrir Menú'}
         >
-          {isMobileNavOpen ? <X size={20} /> : <Menu size={20} />}
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Menú</span>
+          {isMobileNavOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </header>
 

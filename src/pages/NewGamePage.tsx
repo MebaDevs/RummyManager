@@ -1,28 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { Player, GameSettings } from '../domain/models';
+import { Player, GameSettings, GameSummary } from '../domain/models';
 import { AVATAR_COLORS } from '../domain/rules/defaultRounds';
-import { Plus, Trash2, UserCheck, Play, Settings, AlertCircle, Clock, Volume2, ShieldAlert, Users } from 'lucide-react';
+import { Plus, Trash2, UserCheck, Play, Settings, AlertCircle, Clock, Volume2, ShieldAlert, Users, History, Check, X } from 'lucide-react';
 
 export const NewGamePage: React.FC = () => {
-  const { globalSettings, createNewGame, setCurrentPage } = useGame();
+  const { globalSettings, createNewGame, repository, setCurrentPage } = useGame();
 
-  // Start with an empty players array as requested
+  // Start with an empty players array
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [settings, setSettings] = useState<GameSettings>({ ...globalSettings });
 
-  const handleAddPlayer = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = newPlayerName.trim();
-    if (!trimmed) {
-      setErrorMsg('Por favor ingresa un nombre para el jugador.');
-      return;
-    }
+  // Past games for quick player importing
+  const [pastGames, setPastGames] = useState<GameSummary[]>([]);
+  const [allPastPlayerNames, setAllPastPlayerNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadPastPlayers();
+  }, []);
+
+  const loadPastPlayers = async () => {
+    const games = await repository.getAllGames();
+    setPastGames(games);
+
+    // Extract unique player names across all past matches
+    const nameSet = new Set<string>();
+    games.forEach((g) => {
+      g.playerNames.forEach((name) => nameSet.add(name));
+    });
+    setAllPastPlayerNames(Array.from(nameSet));
+  };
+
+  const handleAddPlayerByName = (nameToAdd: string) => {
+    const trimmed = nameToAdd.trim();
+    if (!trimmed) return;
 
     if (players.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      setErrorMsg('Ya existe un jugador con este nombre.');
+      setErrorMsg(`"${trimmed}" ya está en la lista de jugadores.`);
       return;
     }
 
@@ -31,7 +47,6 @@ export const NewGamePage: React.FC = () => {
       return;
     }
 
-    // Automatically assign color sequentially
     const autoColor = AVATAR_COLORS[players.length % AVATAR_COLORS.length];
 
     const newPlayer: Player = {
@@ -41,17 +56,42 @@ export const NewGamePage: React.FC = () => {
       isInitialPlayer: players.length === 0,
     };
 
-    setPlayers([...players, newPlayer]);
-    setNewPlayerName('');
+    setPlayers((prev) => [...prev, newPlayer]);
     setErrorMsg('');
+  };
+
+  const handleImportMatchPlayers = (gameSummary: GameSummary) => {
+    const newAdded: Player[] = [...players];
+    let addedCount = 0;
+
+    gameSummary.playerNames.forEach((name) => {
+      if (!newAdded.some((p) => p.name.toLowerCase() === name.toLowerCase()) && newAdded.length < 8) {
+        newAdded.push({
+          id: `p_${Date.now()}_${newAdded.length}`,
+          name,
+          avatarColor: AVATAR_COLORS[newAdded.length % AVATAR_COLORS.length],
+          isInitialPlayer: newAdded.length === 0,
+        });
+        addedCount++;
+      }
+    });
+
+    setPlayers(newAdded);
+    if (addedCount > 0) {
+      setErrorMsg('');
+    }
+  };
+
+  const handleAddPlayer = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    handleAddPlayerByName(newPlayerName);
+    setNewPlayerName('');
   };
 
   const handleRemovePlayer = (id: string) => {
     const updated = players.filter((p) => p.id !== id);
-    if (updated.length > 0 && !updated.some((p) => p.isInitialPlayer)) {
-      updated[0].isInitialPlayer = true;
-    }
-    setPlayers(updated);
+    const reindexed = updated.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 }));
+    setPlayers(reindexed);
     setErrorMsg('');
   };
 
@@ -64,12 +104,8 @@ export const NewGamePage: React.FC = () => {
     copy[index] = copy[newIndex];
     copy[newIndex] = temp;
 
-    // Ensure initial player status follows first item if needed
-    if (!copy.some((p) => p.isInitialPlayer)) {
-      copy[0].isInitialPlayer = true;
-    }
-
-    setPlayers(copy);
+    const reindexed = copy.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 }));
+    setPlayers(reindexed);
   };
 
   const handleStartGame = async () => {
@@ -82,12 +118,12 @@ export const NewGamePage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 950, margin: '0 auto', padding: '36px 20px' }}>
+    <div style={{ maxWidth: 980, margin: '0 auto', padding: '36px 20px' }}>
       <h2 style={{ fontSize: 32, marginBottom: 8 }} className="font-display">
         Configuración de Partida
       </h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 28 }}>
-        Agrega los jugadores a la partida. Los colores se asignan automáticamente.
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Agrega o importa jugadores de partidas anteriores. Puedes reordenarlos según sus asientos en la mesa.
       </p>
 
       {errorMsg && (
@@ -109,22 +145,90 @@ export const NewGamePage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+      {/* QUICK IMPORT SECTION FROM PAST MATCHES */}
+      {allPastPlayerNames.length > 0 && (
+        <div
+          className="glass-panel"
+          style={{
+            padding: '20px 24px',
+            marginBottom: 24,
+            borderColor: 'rgba(155, 92, 255, 0.3)',
+            background: 'rgba(155, 92, 255, 0.06)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <History size={20} color="var(--accent-purple)" />
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>
+              Cargar jugadores de partidas anteriores
+            </h3>
+          </div>
+
+          {/* Past Match Presets */}
+          {pastGames.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Importar mesa completa de una partida pasada:
+              </span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {pastGames.slice(0, 3).map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => handleImportMatchPlayers(g)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ borderRadius: 999 }}
+                  >
+                    <Users size={14} /> {g.playerNames.join(', ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Player Chips */}
+          <div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              O agrega jugadores individualmente:
+            </span>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {allPastPlayerNames.map((name) => {
+                const isAlreadyAdded = players.some((p) => p.name.toLowerCase() === name.toLowerCase());
+                return (
+                  <button
+                    key={name}
+                    onClick={() => !isAlreadyAdded && handleAddPlayerByName(name)}
+                    disabled={isAlreadyAdded}
+                    className={`btn btn-sm ${isAlreadyAdded ? 'btn-secondary' : 'btn-primary'}`}
+                    style={{
+                      borderRadius: 999,
+                      opacity: isAlreadyAdded ? 0.4 : 1,
+                      cursor: isAlreadyAdded ? 'default' : 'pointer',
+                    }}
+                  >
+                    {isAlreadyAdded ? <Check size={14} /> : <Plus size={14} />} {name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
         {/* Players Section */}
-        <div className="glass-panel" style={{ padding: 20 }}>
+        <div className="glass-panel" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
             <UserCheck size={20} color="var(--accent-purple)" /> Registro de Jugadores ({players.length})
           </h3>
 
-          {/* Add Player Form (Clean input without manual color picking) */}
+          {/* Add Player Form */}
           <form onSubmit={handleAddPlayer} style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
             <input
               type="text"
-              placeholder="Nombre del jugador (ej. Juan)..."
+              placeholder="Nombre del jugador (ej. Sebas)..."
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
               style={{
-                flex: '1 1 180px',
+                flex: 1,
                 padding: '12px 16px',
                 borderRadius: 'var(--radius-md)',
                 background: 'rgba(0,0,0,0.4)',
@@ -134,7 +238,7 @@ export const NewGamePage: React.FC = () => {
                 outline: 'none',
               }}
             />
-            <button type="submit" className="btn btn-primary" style={{ flex: '0 0 auto' }}>
+            <button type="submit" className="btn btn-primary">
               <Plus size={18} /> Agregar
             </button>
           </form>
@@ -152,7 +256,7 @@ export const NewGamePage: React.FC = () => {
             >
               <Users size={36} color="var(--text-muted)" style={{ marginBottom: 8 }} />
               <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-                La lista está vacía. Escribe un nombre y presiona **Agregar** para incluir jugadores.
+                La lista está vacía. Selecciona un jugador anterior arriba o escribe un nuevo nombre.
               </p>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Mínimo 2 jugadores, máximo 8.</span>
             </div>
@@ -350,15 +454,15 @@ export const NewGamePage: React.FC = () => {
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
-        <button onClick={() => setCurrentPage('home')} className="btn btn-secondary btn-lg" style={{ flex: '1 1 auto' }}>
-          Cancelar
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginTop: 32, flexWrap: 'wrap' }}>
+        <button onClick={() => setCurrentPage('home')} className="btn btn-secondary btn-lg">
+          <X size={20} /> Cancelar
         </button>
         <button
           onClick={handleStartGame}
           className="btn btn-success btn-lg"
           disabled={players.length < 2}
-          style={{ opacity: players.length < 2 ? 0.5 : 1, cursor: players.length < 2 ? 'not-allowed' : 'pointer', flex: '1 1 auto' }}
+          style={{ opacity: players.length < 2 ? 0.5 : 1, cursor: players.length < 2 ? 'not-allowed' : 'pointer' }}
         >
           <Play size={20} /> Comenzar Partida Ahora
         </button>

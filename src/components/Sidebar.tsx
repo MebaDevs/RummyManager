@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, PageView } from '../context/GameContext';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 import { Flame, Play, History, Users, Settings, Volume2, VolumeX, Copy, Check } from 'lucide-react';
 
 interface SidebarProps {
@@ -10,6 +11,10 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { currentPage, setCurrentPage, activeGame, globalSettings, updateGlobalSettings } = useGame();
   const [copied, setCopied] = useState(false);
+
+  useModalBackHandler(isOpen, () => {
+    if (onClose) onClose();
+  });
 
   const sessionCode = activeGame ? `RMY-${activeGame.id.slice(-4).toUpperCase()}` : 'RMY-4821';
 

@@ -58,7 +58,7 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={() => quitCurrentGame()}
               className="btn btn-secondary btn-sm"

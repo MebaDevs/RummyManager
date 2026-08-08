@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, X, ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { Player } from '../domain/models';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 interface ReorderPlayersModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export const ReorderPlayersModal: React.FC<ReorderPlayersModalProps> = ({
   onSaveOrder,
 }) => {
   const [orderedList, setOrderedList] = useState<Player[]>(players);
+
+  useModalBackHandler(isOpen, onClose);
 
   if (!isOpen) return null;
 

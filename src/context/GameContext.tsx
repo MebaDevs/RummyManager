@@ -28,12 +28,30 @@ const engine = new RummyEngine();
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentPage, setCurrentPage] = useState<PageView>('home');
+  const [currentPage, setCurrentPageRaw] = useState<PageView>('home');
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [globalSettings, setGlobalSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
 
+  const setCurrentPage = (page: PageView, pushHistory = true) => {
+    setCurrentPageRaw(page);
+    if (pushHistory && window.history.state?.page !== page) {
+      window.history.pushState({ page }, '');
+    }
+  };
+
   useEffect(() => {
     loadActiveGame();
+
+    const handlePopStatePage = (e: PopStateEvent) => {
+      if (e.state?.page) {
+        setCurrentPageRaw(e.state.page);
+      } else if (!e.state?.modalOpen) {
+        setCurrentPageRaw('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopStatePage);
+    return () => window.removeEventListener('popstate', handlePopStatePage);
   }, []);
 
   const loadActiveGame = async () => {

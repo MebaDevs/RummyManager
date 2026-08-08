@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Trophy, Medal, ChevronLeft, ChevronRight, ListOrdered, BarChart2, ShieldAlert, Clock, Award } from 'lucide-react';
 import { Game } from '../domain/models';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 interface ScoreboardDrawerProps {
   game: Game;
@@ -19,6 +20,8 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ScoreTab>('players');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+
+  useModalBackHandler(isOpen, onClose);
 
   // Dynamic ranking calculation based on scores in game (lowest points wins!)
   const playerTotals: Record<string, number> = {};

@@ -3,6 +3,7 @@ import { Trophy, CheckCircle, ArrowRight, X } from 'lucide-react';
 import { Game } from '../domain/models';
 import confetti from 'canvas-confetti';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 interface RoundSummaryModalProps {
   game: Game;
@@ -23,6 +24,8 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
   const [winnerId, setWinnerId] = useState<string>(game.players[0]?.id || '');
   const [handPoints, setHandPoints] = useState<Record<string, number>>({});
   const [step, setStep] = useState<'select_winner' | 'enter_points' | 'summary'>('select_winner');
+
+  useModalBackHandler(isOpen, onClose);
 
   if (!isOpen || !currentRound) return null;
 

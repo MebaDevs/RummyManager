@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useModalBackHandler(isOpen, onCancel);
   if (!isOpen) return null;
 
   return (
@@ -90,14 +92,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={onCancel} className="btn btn-secondary" style={{ flex: '1 1 120px' }}>
-            {cancelText}
+            <X size={16} /> {cancelText}
           </button>
           <button
             onClick={onConfirm}
             className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`}
             style={{ flex: '1 1 120px' }}
           >
-            {confirmText}
+            <AlertTriangle size={16} /> {confirmText}
           </button>
         </div>
       </div>

@@ -62,6 +62,24 @@ src/
    - El ganador del juego es el jugador con **MENOR cantidad de puntos acumulados**.
    - Al cerrar la ronda (Victoria de un jugador), los jugadores activos ingresan la suma de sus cartas retenidas. El ganador de ronda suma 0 pts.
 
+## 📱 Reglas Estrictas de Layout Responsive y Contención de Botones (OBLIGATORIO)
+
+Cualquier agente que modifique componentes UI, estilos CSS o layouts **debe cumplir estrictamente las siguientes reglas**:
+
+1. **Sin desbordamientos horizontales (Zero Horizontal Overflow):**
+   - NUNCA asignar `width` o `minWidth` fijos mayores a `100%` ni `flex` rígidos sin `max-width: 100%`.
+   - Todos los botones (`.btn`, `<button>`) y contenedores (`.glass-panel`, `div`) DEBEN tener `max-width: 100% !important` y `box-sizing: border-box !important`.
+   - En pantallas móviles (`@media (max-width: 600px)`), los botones de acción principales DEBEN tener `width: 100% !important;` y flex wrapping activado (`flex-wrap: wrap`).
+
+2. **Texto de Botones Respetuoso con Pantallas Pequeñas:**
+   - NUNCA usar `white-space: nowrap` en botones con icono y texto que puedan superar el ancho de 320px-390px. Usar `white-space: normal`, `word-break: break-word` o ajuste flexible.
+
+3. **Intercepción del Botón Atrás en Modales:**
+   - Todos los modales, modales de confirmación y drawers laterales DEBEN implementar `useModalBackHandler(isOpen, onClose)` para que presionar el botón "Atrás" en móviles o navegadores cierre el modal sin abandonar la página.
+
+4. **Orden Vertical Móvil en Mesa de Juego (`ActiveGamePage`):**
+   - 1º Ronda Actual -> 2º Temporizador Circular -> 3º Controles de Turno (`BottomToolbar`) -> 4º Lista de Jugadores (Jugador Activo siempre de 1º).
+
 ---
 
 ## 🚀 Roadmap de Versiones (Fase 1)

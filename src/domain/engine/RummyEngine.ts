@@ -123,6 +123,7 @@ export class RummyEngine {
 
   /**
    * Start the match (transitions from setup -> playing and starts turn 1 of round 1).
+   * Rule: The first player in the players list (players[0]) ALWAYS starts Round 1.
    */
   public startGame(): Game {
     if (this.game.status !== 'setup') {
@@ -134,8 +135,13 @@ export class RummyEngine {
     currentRound.status = 'in_progress';
     currentRound.startedAt = now;
 
-    // Find initial player or fallback to first player
-    const initialPlayer = this.game.players.find((p) => p.isInitialPlayer) || this.game.players[0];
+    // Rule: The first player in the list (players[0]) starts Round 1
+    const initialPlayer = this.game.players[0];
+
+    // Ensure isInitialPlayer flag matches players[0]
+    this.game.players.forEach((p, idx) => {
+      p.isInitialPlayer = idx === 0;
+    });
 
     // Set player state to current_turn
     currentRound.playerStates[initialPlayer.id].status = 'current_turn';
@@ -160,7 +166,7 @@ export class RummyEngine {
     this.game.updatedAt = now;
 
     this.logEvent('ROUND_START', `Inicio de la Ronda 1: ${currentRound.objective.name}`, undefined, 1);
-    this.logEvent('TURN_START', `Turno de ${initialPlayer.name}`, initialPlayer.id, 1);
+    this.logEvent('TURN_START', `Turno inicial de ${initialPlayer.name}`, initialPlayer.id, 1);
 
     this.notify();
     return this.getGame();
