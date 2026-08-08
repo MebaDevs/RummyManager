@@ -95,18 +95,18 @@ export const AppLayout: React.FC = () => {
           >
             <Flame size={20} />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 800 }} className="gradient-text">
+          <span style={{ fontSize: 16, fontWeight: 800 }} className="gradient-text mobile-header-title">
             RUMMY TIMER
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <button
             onClick={toggleFullscreen}
             className="btn btn-secondary"
             style={{
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               padding: 0,
               display: 'flex',
               alignItems: 'center',
@@ -114,18 +114,18 @@ export const AppLayout: React.FC = () => {
               borderRadius: 'var(--radius-md)',
               flexShrink: 0,
             }}
-            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa (Ocultar barra URL)'}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
             aria-label="Pantalla Completa"
           >
-            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
 
           <button
             onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
             className="btn btn-secondary"
             style={{
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               padding: 0,
               display: 'flex',
               alignItems: 'center',
@@ -135,7 +135,7 @@ export const AppLayout: React.FC = () => {
             }}
             aria-label={isMobileNavOpen ? 'Cerrar Menú' : 'Abrir Menú'}
           >
-            {isMobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+            {isMobileNavOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </header>

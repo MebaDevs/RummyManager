@@ -10,7 +10,7 @@ import { ReorderPlayersModal } from '../components/ReorderPlayersModal';
 import { usePreciseTimer } from '../hooks/usePreciseTimer';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
 import { useRummyEngine } from '../hooks/useRummyEngine';
-import { Users } from 'lucide-react';
+import { Users, Trophy } from 'lucide-react';
 
 export const ActiveGamePage: React.FC = () => {
   const { activeGame, updateGameState, quitCurrentGame, setCurrentPage } = useGame();
@@ -153,20 +153,20 @@ export const ActiveGamePage: React.FC = () => {
       </div>
 
       {/* Extra Actions Bar (Round Winner & Reorder Players) */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 12, marginBottom: 16, flexWrap: 'wrap', width: '100%' }}>
         <button
           onClick={handleOpenDeclareWinner}
-          className="btn btn-secondary btn-sm"
-          style={{ borderRadius: 999 }}
+          className="btn btn-secondary"
+          style={{ flex: '1 1 140px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
         >
-          🏆 Declarar Ganador de Ronda
+          <Trophy size={16} color="var(--status-amber)" /> Declarar Ganador
         </button>
         <button
           onClick={() => setIsReorderModalOpen(true)}
-          className="btn btn-secondary btn-sm"
-          style={{ borderRadius: 999 }}
+          className="btn btn-secondary"
+          style={{ flex: '1 1 140px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
         >
-          <Users size={16} /> Reordenar Asientos
+          <Users size={16} color="var(--accent-purple)" /> Reordenar Asientos
         </button>
       </div>
 

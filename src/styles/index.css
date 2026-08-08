@@ -226,19 +226,20 @@ h1, h2, h3, h4, .font-display {
 
 /* Badges & Tags */
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  max-width: 100%;
-  white-space: normal;
-  line-height: 1.2;
-  word-break: break-word;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 4px 10px !important;
+  border-radius: var(--radius-full) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .badge-purple {
@@ -321,6 +322,12 @@ h1, h2, h3, h4, .font-display {
     display: flex !important;
     flex-direction: column !important;
   }
+
+@media (max-width: 400px) {
+  .mobile-header-title {
+    display: none !important;
+  }
+}
   .header-info-container {
     order: 1 !important;
     display: block !important;
@@ -401,11 +408,26 @@ h1, h2, h3, h4, .font-display {
     max-width: 100% !important;
   }
   .btn {
-    width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    white-space: normal !important;
-    word-break: break-word !important;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .btn-block-mobile {
+    width: 100% !important;
+  }
+  .mobile-scoreboard-toggle {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: var(--radius-md) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
   }
   .bottom-toolbar-container .btn {
     width: 100% !important;

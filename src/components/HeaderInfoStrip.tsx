@@ -26,35 +26,64 @@ export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
       <div
         className="glass-panel round-card-main"
         style={{
-          padding: '14px 18px',
+          padding: '16px 18px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
+          flexDirection: 'column',
+          gap: 10,
+          width: '100%',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-        <div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
-            RONDA ACTUAL
-          </span>
-          <h3 style={{ fontSize: 20, fontWeight: 800, margin: '2px 0 4px 0' }}>
-            Ronda {currentRound?.number || 1}
-          </h3>
-          <span className="badge badge-purple" style={{ fontSize: 11 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+          <div>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+              RONDA ACTUAL
+            </span>
+            <h3 style={{ fontSize: 22, fontWeight: 800, margin: '2px 0 0 0', whiteSpace: 'nowrap' }}>
+              Ronda {currentRound?.number || 1}
+            </h3>
+          </div>
+
+          {/* Botón de Puntuación Integrado para Móvil (Solo Icono) */}
+          <button
+            onClick={onToggleScoreboard}
+            className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'} mobile-scoreboard-toggle`}
+            style={{
+              width: 38,
+              height: 38,
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-md)',
+              flexShrink: 0,
+            }}
+            title={isScoreboardOpen ? 'Ocultar Puntuación' : 'Ver Puntuación'}
+            aria-label="Puntuación"
+          >
+            {isScoreboardOpen ? <X size={20} /> : <BarChart3 size={20} />}
+          </button>
+        </div>
+
+        <div style={{ width: '100%', overflow: 'hidden' }}>
+          <span
+            className="badge badge-purple"
+            style={{
+              fontSize: 12,
+              padding: '6px 12px',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             🃏 {currentRound?.objective.name.split(':')[1] || currentRound?.objective.name}
           </span>
         </div>
-
-        {/* Botón de Puntuación Integrado para Móvil */}
-        <button
-          onClick={onToggleScoreboard}
-          className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'} mobile-scoreboard-toggle`}
-          style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', flexShrink: 0 }}
-          title={isScoreboardOpen ? 'Ocultar Puntuación' : 'Ver Puntuación'}
-        >
-          {isScoreboardOpen ? <X size={18} /> : <BarChart3 size={18} />}
-          <span>{isScoreboardOpen ? 'Ocultar' : 'Puntuación'}</span>
-        </button>
       </div>
 
       {/* 2. Jugador Actual (Solo Desktop) */}
