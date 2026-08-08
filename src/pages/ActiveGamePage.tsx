@@ -138,6 +138,7 @@ export const ActiveGamePage: React.FC = () => {
 
       {/* 4. Mesa Central de Juego (Área Principal con Temporizador SVG) */}
       <CentralTimerTable
+        game={game}
         players={game.players}
         activePlayerId={activeTurnPlayerId}
         timerState={timerState}

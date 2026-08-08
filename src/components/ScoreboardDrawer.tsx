@@ -3,6 +3,8 @@ import { X, Trophy, Medal, ChevronLeft, ChevronRight, ListOrdered, BarChart2, Sh
 import { Game } from '../domain/models';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
+import { getPlayerTotalTimeMs, formatPlayerTime } from '../domain/rules/timeUtils';
+
 interface ScoreboardDrawerProps {
   game: Game;
   isOpen: boolean;
@@ -29,18 +31,28 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
     playerTotals[p.id] = 0;
   });
 
+  const gameErrorRoundsPerPlayer = new Set<string>();
+  game.scores.forEach((sc) => {
+    if (sc.source === 'game_error') gameErrorRoundsPerPlayer.add(`${sc.playerId}_r${sc.roundNumber}`);
+  });
+
   game.scores.forEach((sc) => {
     if (playerTotals[sc.playerId] !== undefined) {
+      if (sc.source === 'timeout' && gameErrorRoundsPerPlayer.has(`${sc.playerId}_r${sc.roundNumber}`)) return;
       playerTotals[sc.playerId] += sc.points;
     }
   });
 
   const sortedPlayers = [...game.players]
-    .map((player) => ({
-      player,
-      points: playerTotals[player.id] || 0,
-      timeSpent: '03:15',
-    }))
+    .map((player) => {
+      const timeMs = getPlayerTotalTimeMs(game, player.id);
+      return {
+        player,
+        points: playerTotals[player.id] || 0,
+        timeSpentMs: timeMs,
+        timeSpent: formatPlayerTime(timeMs),
+      };
+    })
     .sort((a, b) => a.points - b.points);
 
   const getPositionBadge = (pos: number) => {

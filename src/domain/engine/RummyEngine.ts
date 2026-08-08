@@ -184,6 +184,12 @@ export class RummyEngine {
     const currentRound = this.game.rounds[this.game.currentRoundIndex];
 
     // Finalize current turn
+    if (this.game.currentTurn.status === 'running' && this.game.currentTurn.startedAt) {
+      const nowMs = new Date(now).getTime();
+      const startMs = new Date(this.game.currentTurn.startedAt).getTime();
+      const runSegment = Math.max(0, nowMs - startMs);
+      this.game.currentTurn.accumulatedMs += runSegment;
+    }
     this.game.currentTurn.endedAt = now;
     this.game.currentTurn.status = 'finished';
 

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GameSummary } from '../domain/models';
-import { Trophy, Calendar, Users, Trash2 } from 'lucide-react';
+import { Trophy, Calendar, Users, Trash2, Eye } from 'lucide-react';
+import { PastGameDetailModal } from '../components/PastGameDetailModal';
 
 export const HistoryPage: React.FC = () => {
   const { repository, setCurrentPage } = useGame();
   const [games, setGames] = useState<GameSummary[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -16,7 +18,8 @@ export const HistoryPage: React.FC = () => {
     setGames(list);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     await repository.deleteGame(id);
     await loadHistory();
   };
@@ -29,7 +32,7 @@ export const HistoryPage: React.FC = () => {
             Historial de Partidas
           </h2>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Revisa partidas guardadas, ganadores y desgloses anteriores.
+            Haz clic en una partida para ver la tabla de posiciones, puntos y tiempo acumulado por jugador.
           </p>
         </div>
       </div>
@@ -50,6 +53,7 @@ export const HistoryPage: React.FC = () => {
           {games.map((g) => (
             <div
               key={g.id}
+              onClick={() => setSelectedGameId(g.id)}
               className="glass-panel"
               style={{
                 padding: 20,
@@ -58,6 +62,8 @@ export const HistoryPage: React.FC = () => {
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: 16,
+                cursor: 'pointer',
+                transition: 'border 0.15s, transform 0.15s',
               }}
             >
               <div>
@@ -84,8 +90,18 @@ export const HistoryPage: React.FC = () => {
                     <div style={{ fontSize: 15, fontWeight: 700 }}>🏆 {g.winnerName}</div>
                   </div>
                 )}
+
                 <button
-                  onClick={() => handleDelete(g.id)}
+                  onClick={() => setSelectedGameId(g.id)}
+                  className="btn btn-primary btn-sm"
+                  style={{ borderRadius: 999 }}
+                  title="Ver posiciones y tiempos"
+                >
+                  <Eye size={15} /> Ver Detalle
+                </button>
+
+                <button
+                  onClick={(e) => handleDelete(e, g.id)}
                   className="btn btn-secondary btn-sm"
                   style={{ color: 'var(--status-red)' }}
                   title="Eliminar partida"
@@ -97,6 +113,13 @@ export const HistoryPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Modal de Detalle de Partida Anterior */}
+      <PastGameDetailModal
+        gameId={selectedGameId}
+        isOpen={selectedGameId !== null}
+        onClose={() => setSelectedGameId(null)}
+      />
     </div>
   );
 };

@@ -1,15 +1,18 @@
 import React from 'react';
-import { Player } from '../domain/models';
+import { Game, Player } from '../domain/models';
 import { Bell, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { PreciseTimerState } from '../hooks/usePreciseTimer';
+import { getPlayerTotalTimeMs, formatPlayerTime } from '../domain/rules/timeUtils';
 
 interface CentralTimerTableProps {
+  game: Game;
   players: Player[];
   activePlayerId: string;
   timerState: PreciseTimerState;
 }
 
 export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
+  game,
   players,
   activePlayerId,
   timerState,
@@ -40,7 +43,12 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
 
   const renderPlayerCard = (player: Player) => {
     const isActive = player.id === activePlayerId;
-    const isOut = false; // Linked to playerState status
+    const currentRound = game.rounds[game.currentRoundIndex];
+    const playerState = currentRound?.playerStates[player.id];
+    const isOut = playerState?.status === 'out_by_error';
+
+    const totalTimeMs = getPlayerTotalTimeMs(game, player.id);
+    const formattedTime = formatPlayerTime(totalTimeMs);
 
     return (
       <div
@@ -48,14 +56,14 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
         className="glass-panel"
         style={{
           padding: '14px 16px',
-          borderColor: isActive ? timerColor : 'var(--panel-border)',
+          borderColor: isActive ? timerColor : isOut ? 'var(--status-red)' : 'var(--panel-border)',
           boxShadow: isActive ? `0 0 20px ${timerColor}66` : 'none',
-          background: isActive ? `${timerColor}10` : 'var(--bg-card)',
+          background: isActive ? `${timerColor}10` : isOut ? 'rgba(255, 83, 101, 0.08)' : 'var(--bg-card)',
           transition: 'all var(--transition-normal)',
           width: '100%',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <div
               style={{
@@ -78,7 +86,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
             <div style={{ minWidth: 0 }}>
               <h4 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</h4>
               <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Clock size={11} /> 03:15 total
+                <Clock size={11} /> {formattedTime} total
               </span>
             </div>
           </div>
@@ -105,21 +113,6 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
               }}
             />
           )}
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: 8,
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Puntos acumulados:</span>
-          <span className="font-mono" style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent-purple)' }}>
-            0 pts
-          </span>
         </div>
       </div>
     );
