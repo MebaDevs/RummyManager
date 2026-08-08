@@ -13,8 +13,7 @@ export const NewGamePage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [settings, setSettings] = useState<GameSettings>({ ...globalSettings });
 
-  const [pastGames, setPastGames] = useState<GameSummary[]>([]);
-  const [allPastPlayerNames, setAllPastPlayerNames] = useState<string[]>([]);
+  const [lastGame, setLastGame] = useState<GameSummary | null>(null);
 
   // Pointer-events + touch based drag-to-sort (no HTML5 DnD API)
   const { draggingIndex, overIndex, handleHandleMouseDown, handleHandleTouchStart, handleItemMouseEnter, setRowRef } = useSortable(
@@ -28,10 +27,11 @@ export const NewGamePage: React.FC = () => {
 
   const loadPastPlayers = async () => {
     const games = await repository.getAllGames();
-    setPastGames(games);
-    const nameSet = new Set<string>();
-    games.forEach((g) => g.playerNames.forEach((name) => nameSet.add(name)));
-    setAllPastPlayerNames(Array.from(nameSet));
+    if (games.length > 0) {
+      setLastGame(games[0]);
+    } else {
+      setLastGame(null);
+    }
   };
 
   const handleAddPlayerByName = (nameToAdd: string) => {
@@ -104,7 +104,7 @@ export const NewGamePage: React.FC = () => {
         Configuración de Partida
       </h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Agrega o importa jugadores de partidas anteriores. Arrastra el ícono ⠿ para reordenar los asientos.
+        Agrega o importa jugadores de la última partida. Arrastra el ícono ⠿ para reordenar los asientos.
       </p>
 
       {errorMsg && (
@@ -126,43 +126,36 @@ export const NewGamePage: React.FC = () => {
         </div>
       )}
 
-      {/* QUICK IMPORT SECTION */}
-      {allPastPlayerNames.length > 0 && (
+      {/* QUICK IMPORT SECTION — LATEST GAME ONLY */}
+      {lastGame && lastGame.playerNames.length > 0 && (
         <div
           className="glass-panel"
           style={{ padding: '20px 24px', marginBottom: 24, borderColor: 'rgba(155, 92, 255, 0.3)', background: 'rgba(155, 92, 255, 0.06)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <History size={20} color="var(--accent-purple)" />
-            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Cargar jugadores de partidas anteriores</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Jugadores de la última partida</h3>
           </div>
 
-          {pastGames.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
-                Importar mesa completa de una partida pasada:
-              </span>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {pastGames.slice(0, 3).map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => handleImportMatchPlayers(g)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: 999 }}
-                  >
-                    <Users size={14} /> {g.playerNames.join(', ')}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div style={{ marginBottom: 14 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Importar mesa completa de la última partida:
+            </span>
+            <button
+              onClick={() => handleImportMatchPlayers(lastGame)}
+              className="btn btn-secondary btn-sm"
+              style={{ borderRadius: 999 }}
+            >
+              <Users size={14} /> Cargar {lastGame.playerNames.join(', ')}
+            </button>
+          </div>
 
           <div>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               O agrega jugadores individualmente:
             </span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {allPastPlayerNames.map((name) => {
+              {lastGame.playerNames.map((name) => {
                 const isAlreadyAdded = players.some((p) => p.name.toLowerCase() === name.toLowerCase());
                 return (
                   <button
