@@ -12,6 +12,12 @@ import './styles/index.css';
 const MainContent: React.FC = () => {
   const { currentPage } = useGame();
 
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [currentPage]);
+
   switch (currentPage) {
     case 'home':
       return <HomePage />;
