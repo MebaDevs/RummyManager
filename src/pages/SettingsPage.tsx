@@ -85,6 +85,24 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Auto Advance on Timeout */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid var(--panel-border)' }}>
+            <div>
+              <label style={{ fontSize: 15, fontWeight: 600 }}>
+                Avanzar turno automáticamente en Timeout
+              </label>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Si está desactivado (recomendado), el jugador mantiene su turno tras agotar el tiempo y cronometra el tiempo excedido hasta finalizar su jugada.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.autoAdvanceOnTimeout}
+              onChange={(e) => setSettings({ ...settings, autoAdvanceOnTimeout: e.target.checked })}
+              style={{ width: 22, height: 22, accentColor: 'var(--accent-purple)', cursor: 'pointer' }}
+            />
+          </div>
+
           {/* Game Error Penalty */}
           <div>
             <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -6,6 +6,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   gameErrorPenalty: 150,
   warningSeconds: 15,
   soundEnabled: true,
+  autoAdvanceOnTimeout: false, // Por defecto, continua cronometrando sin cambiar de turno
 };
 
 export const DEFAULT_RUMMY_ROUNDS: RoundObjective[] = [

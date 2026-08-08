@@ -23,6 +23,7 @@ export interface GameSettings {
   gameErrorPenalty: number;     // e.g. 150
   warningSeconds: number;       // e.g. 15
   soundEnabled: boolean;
+  autoAdvanceOnTimeout: boolean; // false = continua cronometrando tiempo excedido hasta movimiento manual
 }
 
 export interface RoundObjective {

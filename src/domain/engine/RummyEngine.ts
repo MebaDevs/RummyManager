@@ -223,47 +223,56 @@ export class RummyEngine {
   }
 
   /**
-   * Handle Turn Timeout (time reached 0s). Applies timeout penalty and advances turn.
+   * Handle Turn Timeout (time limit reached).
+   * Applies timeout penalty once. If autoAdvanceOnTimeout is true, advances turn.
+   * If autoAdvanceOnTimeout is false, keeps turn active for overdue time.
    */
   public timeoutTurn(): Game {
     if (this.game.status !== 'playing' || !this.game.currentTurn) {
       return this.getGame();
     }
 
-    const now = new Date().toISOString();
     const turn = this.game.currentTurn;
+    const now = new Date().toISOString();
     const currentRound = this.game.rounds[this.game.currentRoundIndex];
     const player = this.game.players.find((p) => p.id === turn.playerId);
 
-    turn.endedAt = now;
-    turn.status = 'timeout';
-    turn.penaltyApplied = true;
+    // Apply penalty ONCE per turn
+    if (!turn.penaltyApplied) {
+      turn.penaltyApplied = true;
+      turn.status = 'timeout';
 
-    // Add Timeout Penalty Score Entry
-    if (this.game.settings.timeoutPenalty > 0) {
-      const scoreEntry: ScoreEntry = {
-        id: `score_${Date.now()}`,
-        playerId: turn.playerId,
-        roundNumber: currentRound.number,
-        points: this.game.settings.timeoutPenalty,
-        source: 'timeout',
-        reason: `Penalización por Timeout (+${this.game.settings.timeoutPenalty} pts)`,
-        createdAt: now,
-      };
-      this.game.scores.push(scoreEntry);
+      if (this.game.settings.timeoutPenalty > 0) {
+        const scoreEntry: ScoreEntry = {
+          id: `score_${Date.now()}`,
+          playerId: turn.playerId,
+          roundNumber: currentRound.number,
+          points: this.game.settings.timeoutPenalty,
+          source: 'timeout',
+          reason: `Penalización por Timeout (+${this.game.settings.timeoutPenalty} pts)`,
+          createdAt: now,
+        };
+        this.game.scores.push(scoreEntry);
+        currentRound.playerStates[turn.playerId].roundPoints += this.game.settings.timeoutPenalty;
+      }
 
-      currentRound.playerStates[turn.playerId].roundPoints += this.game.settings.timeoutPenalty;
+      this.logEvent(
+        'TIMEOUT',
+        `Timeout de ${player?.name}. Penalización: +${this.game.settings.timeoutPenalty} pts.`,
+        turn.playerId,
+        currentRound.number
+      );
     }
 
-    this.logEvent(
-      'TIMEOUT',
-      `Timeout de ${player?.name}. Penalización: +${this.game.settings.timeoutPenalty} pts.`,
-      turn.playerId,
-      currentRound.number
-    );
+    // Only advance turn if autoAdvanceOnTimeout is enabled
+    if (this.game.settings.autoAdvanceOnTimeout) {
+      turn.endedAt = now;
+      return this.finishTurn();
+    }
 
-    // Advance to next player
-    return this.finishTurn();
+    this.game.updatedAt = now;
+    this.notify();
+    return this.getGame();
   }
 
   /**

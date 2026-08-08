@@ -265,6 +265,26 @@ export const NewGamePage: React.FC = () => {
               />
             </div>
 
+            {/* Auto Advance on Timeout Toggle */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <label style={{ fontSize: 14, color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>
+                  Avanzar turno automáticamente en Timeout
+                </label>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {settings.autoAdvanceOnTimeout
+                    ? 'Pasa el turno de inmediato al agotar tiempo.'
+                    : 'Desactivado: El jugador conserva su turno y cronometra el tiempo excedido.'}
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.autoAdvanceOnTimeout}
+                onChange={(e) => setSettings({ ...settings, autoAdvanceOnTimeout: e.target.checked })}
+                style={{ width: 20, height: 20, accentColor: 'var(--accent-purple)', cursor: 'pointer' }}
+              />
+            </div>
+
             {/* Game Error Penalty */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>

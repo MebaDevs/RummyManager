@@ -1,6 +1,6 @@
 import React from 'react';
 import { Player } from '../domain/models';
-import { Bell, Clock, CheckCircle } from 'lucide-react';
+import { Bell, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { PreciseTimerState } from '../hooks/usePreciseTimer';
 
 interface CentralTimerTableProps {
@@ -24,7 +24,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
   const strokeOffset = circumference - (circumference * timerState.progressPercent) / 100;
 
   const getTimerColor = () => {
-    if (timerState.isExpired) return 'var(--status-red)';
+    if (timerState.isOverdue || timerState.isExpired) return 'var(--status-red)';
     if (timerState.isWarning) return 'var(--status-amber)';
     return 'var(--status-green)';
   };
@@ -78,9 +78,9 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
           {/* Status badge */}
           {isActive ? (
             <span
-              className={`badge ${timerState.isWarning ? 'badge-amber pulse-warning' : 'badge-green'}`}
+              className={`badge ${timerState.isOverdue ? 'badge-red pulse-warning' : timerState.isWarning ? 'badge-amber pulse-warning' : 'badge-green'}`}
             >
-              TURNO
+              {timerState.isOverdue ? 'TIEMPO EXCEDIDO' : 'TURNO'}
             </span>
           ) : isOut ? (
             <span className="badge badge-red">FUERA</span>
@@ -141,11 +141,11 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          borderColor: timerState.isWarning ? 'var(--status-amber)' : 'var(--panel-border)',
+          borderColor: timerState.isOverdue ? 'var(--status-red)' : timerState.isWarning ? 'var(--status-amber)' : 'var(--panel-border)',
         }}
       >
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>
-          TEMPORIZADOR DE TURNO
+          {timerState.isOverdue ? 'TIEMPO EXCEDIDO (EN CURSO)' : 'TEMPORIZADOR DE TURNO'}
         </span>
 
         {/* Circular Progress SVG */}
@@ -179,7 +179,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
             <span
               className="font-mono"
               style={{
-                fontSize: 44,
+                fontSize: timerState.isOverdue ? 38 : 44,
                 fontWeight: 800,
                 color: timerColor,
                 lineHeight: 1,
@@ -189,14 +189,27 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
               {timerState.formattedTime}
             </span>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-              de {Math.floor(timerState.totalLimitSeconds / 60)}:
-              {String(timerState.totalLimitSeconds % 60).padStart(2, '0')} min
+              {timerState.isOverdue ? 'tiempo excedido' : `de ${Math.floor(timerState.totalLimitSeconds / 60)}:${String(timerState.totalLimitSeconds % 60).padStart(2, '0')} min`}
             </span>
           </div>
         </div>
 
-        {/* Dynamic Warning Chip */}
-        {timerState.isWarning ? (
+        {/* Dynamic Warning / Overdue Chip */}
+        {timerState.isOverdue ? (
+          <div
+            className="badge badge-red pulse-warning"
+            style={{
+              marginTop: 6,
+              padding: '6px 14px',
+              fontSize: 12,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <AlertTriangle size={14} /> ⚠️ Sanción aplicada (Esperando jugada)
+          </div>
+        ) : timerState.isWarning ? (
           <div
             className="badge badge-amber pulse-warning"
             style={{
