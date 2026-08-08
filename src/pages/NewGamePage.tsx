@@ -2,20 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { Player, GameSettings, GameSummary } from '../domain/models';
 import { AVATAR_COLORS } from '../domain/rules/defaultRounds';
-import { Plus, Trash2, UserCheck, Play, Settings, AlertCircle, Clock, Volume2, ShieldAlert, Users, History, Check, X } from 'lucide-react';
+import { Plus, Trash2, UserCheck, Play, Settings, AlertCircle, Clock, Volume2, ShieldAlert, Users, History, Check, X, GripVertical } from 'lucide-react';
+import { useSortable } from '../hooks/useSortable';
 
 export const NewGamePage: React.FC = () => {
   const { globalSettings, createNewGame, repository, setCurrentPage } = useGame();
 
-  // Start with an empty players array
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [settings, setSettings] = useState<GameSettings>({ ...globalSettings });
 
-  // Past games for quick player importing
   const [pastGames, setPastGames] = useState<GameSummary[]>([]);
   const [allPastPlayerNames, setAllPastPlayerNames] = useState<string[]>([]);
+
+  // Pointer-events based drag-to-sort (no HTML5 DnD API)
+  const { draggingIndex, overIndex, handleHandleMouseDown, handleItemMouseEnter } = useSortable(
+    players,
+    (reordered) => setPlayers(reordered.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 })))
+  );
 
   useEffect(() => {
     loadPastPlayers();
@@ -24,12 +29,8 @@ export const NewGamePage: React.FC = () => {
   const loadPastPlayers = async () => {
     const games = await repository.getAllGames();
     setPastGames(games);
-
-    // Extract unique player names across all past matches
     const nameSet = new Set<string>();
-    games.forEach((g) => {
-      g.playerNames.forEach((name) => nameSet.add(name));
-    });
+    games.forEach((g) => g.playerNames.forEach((name) => nameSet.add(name)));
     setAllPastPlayerNames(Array.from(nameSet));
   };
 
@@ -41,14 +42,12 @@ export const NewGamePage: React.FC = () => {
       setErrorMsg(`"${trimmed}" ya está en la lista de jugadores.`);
       return;
     }
-
     if (players.length >= 8) {
       setErrorMsg('El número máximo de jugadores permitido es 8.');
       return;
     }
 
     const autoColor = AVATAR_COLORS[players.length % AVATAR_COLORS.length];
-
     const newPlayer: Player = {
       id: `p_${Date.now()}_${players.length}`,
       name: trimmed,
@@ -56,14 +55,15 @@ export const NewGamePage: React.FC = () => {
       isInitialPlayer: players.length === 0,
     };
 
-    setPlayers((prev) => [...prev, newPlayer]);
+    setPlayers((prev) => {
+      const updated = [...prev, newPlayer];
+      return updated.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 }));
+    });
     setErrorMsg('');
   };
 
   const handleImportMatchPlayers = (gameSummary: GameSummary) => {
     const newAdded: Player[] = [...players];
-    let addedCount = 0;
-
     gameSummary.playerNames.forEach((name) => {
       if (!newAdded.some((p) => p.name.toLowerCase() === name.toLowerCase()) && newAdded.length < 8) {
         newAdded.push({
@@ -72,14 +72,10 @@ export const NewGamePage: React.FC = () => {
           avatarColor: AVATAR_COLORS[newAdded.length % AVATAR_COLORS.length],
           isInitialPlayer: newAdded.length === 0,
         });
-        addedCount++;
       }
     });
-
-    setPlayers(newAdded);
-    if (addedCount > 0) {
-      setErrorMsg('');
-    }
+    setPlayers(newAdded.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 })));
+    setErrorMsg('');
   };
 
   const handleAddPlayer = (e?: React.FormEvent) => {
@@ -90,22 +86,8 @@ export const NewGamePage: React.FC = () => {
 
   const handleRemovePlayer = (id: string) => {
     const updated = players.filter((p) => p.id !== id);
-    const reindexed = updated.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 }));
-    setPlayers(reindexed);
+    setPlayers(updated.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 })));
     setErrorMsg('');
-  };
-
-  const handleMovePlayer = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= players.length) return;
-
-    const copy = [...players];
-    const temp = copy[index];
-    copy[index] = copy[newIndex];
-    copy[newIndex] = temp;
-
-    const reindexed = copy.map((p, idx) => ({ ...p, isInitialPlayer: idx === 0 }));
-    setPlayers(reindexed);
   };
 
   const handleStartGame = async () => {
@@ -113,7 +95,6 @@ export const NewGamePage: React.FC = () => {
       setErrorMsg('Debes agregar al menos 2 jugadores para iniciar la partida.');
       return;
     }
-
     await createNewGame(players, settings);
   };
 
@@ -123,7 +104,7 @@ export const NewGamePage: React.FC = () => {
         Configuración de Partida
       </h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Agrega o importa jugadores de partidas anteriores. Puedes reordenarlos según sus asientos en la mesa.
+        Agrega o importa jugadores de partidas anteriores. Arrastra el ícono ⠿ para reordenar los asientos.
       </p>
 
       {errorMsg && (
@@ -145,25 +126,17 @@ export const NewGamePage: React.FC = () => {
         </div>
       )}
 
-      {/* QUICK IMPORT SECTION FROM PAST MATCHES */}
+      {/* QUICK IMPORT SECTION */}
       {allPastPlayerNames.length > 0 && (
         <div
           className="glass-panel"
-          style={{
-            padding: '20px 24px',
-            marginBottom: 24,
-            borderColor: 'rgba(155, 92, 255, 0.3)',
-            background: 'rgba(155, 92, 255, 0.06)',
-          }}
+          style={{ padding: '20px 24px', marginBottom: 24, borderColor: 'rgba(155, 92, 255, 0.3)', background: 'rgba(155, 92, 255, 0.06)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <History size={20} color="var(--accent-purple)" />
-            <h3 style={{ fontSize: 16, fontWeight: 700 }}>
-              Cargar jugadores de partidas anteriores
-            </h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Cargar jugadores de partidas anteriores</h3>
           </div>
 
-          {/* Past Match Presets */}
           {pastGames.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
@@ -184,7 +157,6 @@ export const NewGamePage: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Player Chips */}
           <div>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               O agrega jugadores individualmente:
@@ -198,11 +170,7 @@ export const NewGamePage: React.FC = () => {
                     onClick={() => !isAlreadyAdded && handleAddPlayerByName(name)}
                     disabled={isAlreadyAdded}
                     className={`btn btn-sm ${isAlreadyAdded ? 'btn-secondary' : 'btn-primary'}`}
-                    style={{
-                      borderRadius: 999,
-                      opacity: isAlreadyAdded ? 0.4 : 1,
-                      cursor: isAlreadyAdded ? 'default' : 'pointer',
-                    }}
+                    style={{ borderRadius: 999, opacity: isAlreadyAdded ? 0.4 : 1, cursor: isAlreadyAdded ? 'default' : 'pointer' }}
                   >
                     {isAlreadyAdded ? <Check size={14} /> : <Plus size={14} />} {name}
                   </button>
@@ -243,7 +211,7 @@ export const NewGamePage: React.FC = () => {
             </button>
           </form>
 
-          {/* Players List or Empty State */}
+          {/* Players List */}
           {players.length === 0 ? (
             <div
               style={{
@@ -261,102 +229,100 @@ export const NewGamePage: React.FC = () => {
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Mínimo 2 jugadores, máximo 8.</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
-              {players.map((player, index) => (
-                <div
-                  key={player.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    background: player.isInitialPlayer ? 'rgba(155, 92, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                    border: player.isInitialPlayer ? '1px solid var(--accent-purple)' : '1px solid var(--panel-border)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <button
-                        type="button"
-                        onClick={() => handleMovePlayer(index, 'up')}
-                        disabled={index === 0}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
+              {players.map((player, index) => {
+                const isDraggingThisRow = draggingIndex === index;
+                const isOverThisRow = overIndex === index && draggingIndex !== null && draggingIndex !== index;
+                return (
+                  <div
+                    key={player.id}
+                    onMouseEnter={() => handleItemMouseEnter(index)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      background: isOverThisRow
+                        ? 'rgba(155, 92, 255, 0.22)'
+                        : player.isInitialPlayer
+                        ? 'rgba(155, 92, 255, 0.12)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                      border: isOverThisRow
+                        ? '2px dashed var(--accent-purple)'
+                        : player.isInitialPlayer
+                        ? '1px solid var(--accent-purple)'
+                        : '1px solid var(--panel-border)',
+                      opacity: isDraggingThisRow ? 0.4 : 1,
+                      transition: 'border 0.1s, background 0.1s, opacity 0.1s',
+                      cursor: draggingIndex !== null ? 'grabbing' : 'default',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* Drag Handle */}
+                      <div
+                        onMouseDown={() => handleHandleMouseDown(index)}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: index === 0 ? 'rgba(255,255,255,0.15)' : 'var(--text-secondary)',
-                          cursor: index === 0 ? 'default' : 'pointer',
-                          fontSize: 10,
-                          lineHeight: 1,
-                          padding: 2,
+                          color: 'var(--text-muted)',
+                          cursor: 'grab',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px 2px',
+                          flexShrink: 0,
                         }}
-                        title="Mover arriba"
+                        title="Arrastra para reordenar"
                       >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMovePlayer(index, 'down')}
-                        disabled={index === players.length - 1}
+                        <GripVertical size={18} />
+                      </div>
+
+                      {/* Position number */}
+                      <span className="font-mono" style={{ fontSize: 12, color: 'var(--text-muted)', width: 16, textAlign: 'center' }}>
+                        {index + 1}
+                      </span>
+
+                      {/* Avatar */}
+                      <div
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: index === players.length - 1 ? 'rgba(255,255,255,0.15)' : 'var(--text-secondary)',
-                          cursor: index === players.length - 1 ? 'default' : 'pointer',
-                          fontSize: 10,
-                          lineHeight: 1,
-                          padding: 2,
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: player.avatarColor,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 800, color: '#000', fontSize: 14,
+                          boxShadow: `0 0 8px ${player.avatarColor}`,
+                          flexShrink: 0,
                         }}
-                        title="Mover abajo"
                       >
-                        ▼
-                      </button>
+                        {player.name.charAt(0).toUpperCase()}
+                      </div>
+
+                      {/* Name & badge */}
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{player.name}</span>
+                        {player.isInitialPlayer && (
+                          <span className="badge badge-purple" style={{ marginLeft: 8, fontSize: 10 }}>
+                            Inicia R1
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        background: player.avatarColor,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        color: '#000',
-                        fontSize: 14,
-                        boxShadow: `0 0 8px ${player.avatarColor}`,
-                      }}
-                    >
-                      {player.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600 }}>{player.name}</span>
-                      {player.isInitialPlayer && (
-                        <span className="badge badge-purple" style={{ marginLeft: 8, fontSize: 10 }}>
-                          Inicia
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 6 }}>
+                    {/* Delete */}
                     <button
                       onClick={() => handleRemovePlayer(player.id)}
                       className="btn btn-secondary btn-sm"
-                      style={{ color: 'var(--status-red)' }}
+                      style={{ color: 'var(--status-red)', flexShrink: 0 }}
                       title="Eliminar jugador"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Game Rules & Settings Section */}
+        {/* Settings Section */}
         <div className="glass-panel" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Settings size={20} color="var(--status-amber)" /> Reglas y Tiempos
@@ -375,9 +341,7 @@ export const NewGamePage: React.FC = () => {
               </div>
               <input
                 type="range"
-                min="30"
-                max="300"
-                step="15"
+                min="30" max="300" step="15"
                 value={settings.turnTimeLimitSeconds}
                 onChange={(e) => setSettings({ ...settings, turnTimeLimitSeconds: Number(e.target.value) })}
                 style={{ width: '100%', accentColor: 'var(--status-green)' }}
@@ -387,25 +351,21 @@ export const NewGamePage: React.FC = () => {
             {/* Timeout Penalty Slider */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                  Penalización por Timeout:
-                </label>
+                <label style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Penalización por Timeout:</label>
                 <span className="font-mono" style={{ fontWeight: 700, color: 'var(--status-amber)' }}>
                   +{settings.timeoutPenalty} pts
                 </span>
               </div>
               <input
                 type="range"
-                min="0"
-                max="100"
-                step="5"
+                min="0" max="100" step="5"
                 value={settings.timeoutPenalty}
                 onChange={(e) => setSettings({ ...settings, timeoutPenalty: Number(e.target.value) })}
                 style={{ width: '100%', accentColor: 'var(--status-amber)' }}
               />
             </div>
 
-            {/* Auto Advance on Timeout Toggle */}
+            {/* Auto Advance Toggle */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <label style={{ fontSize: 14, color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>
