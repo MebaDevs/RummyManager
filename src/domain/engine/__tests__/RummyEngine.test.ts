@@ -32,10 +32,15 @@ export function runRummyEngineTests(): void {
   game = engine.finishTurn();
   assert(game.currentTurn?.playerId === 'p2', 'Second turn should be Bob (p2)');
 
-  // 3. Register Game Error on Bob (+150 pts & out_by_error)
+  // 3. Register Timeout on Bob (+20 pts)
+  game = engine.timeoutTurn();
+  assert(game.scores.some((sc) => sc.playerId === 'p2' && sc.source === 'timeout'), 'Bob should have a timeout score entry');
+
+  // 3b. Register Game Error on Bob (+150 pts) -> Should CANCEL previous timeout entry (+20 pts)
   game = engine.registerGameError('p2');
   assert(game.rounds[0].playerStates['p2'].status === 'out_by_error', 'Bob should be out_by_error');
-  assert(game.rounds[0].playerStates['p2'].roundPoints === 150, 'Bob should have +150 round points');
+  assert(game.rounds[0].playerStates['p2'].roundPoints === 150, 'Bob round points should be 150 (timeout +20 cancelled)');
+  assert(!game.scores.some((sc) => sc.playerId === 'p2' && sc.source === 'timeout'), 'Timeout entry for Bob in round 1 should be cancelled and removed');
   assert(game.currentTurn?.playerId === 'p3', 'Turn should automatically advance to Carlos (p3)');
 
   // 4. Finish Turn -> Ana (p1) [skipping Bob because he is out_by_error]

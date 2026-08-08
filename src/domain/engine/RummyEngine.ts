@@ -277,6 +277,7 @@ export class RummyEngine {
 
   /**
    * Apply "Game Error" penalty (+150 pts) and eliminate player from current round (`out_by_error`).
+   * Rule: If +150 is applied, any previous timeout penalties in the current round for this player are cancelled.
    */
   public registerGameError(targetPlayerId?: string): Game {
     if (this.game.status !== 'playing' || !this.game.currentTurn) {
@@ -287,6 +288,29 @@ export class RummyEngine {
     const now = new Date().toISOString();
     const currentRound = this.game.rounds[this.game.currentRoundIndex];
     const player = this.game.players.find((p) => p.id === playerId);
+    const roundState = currentRound.playerStates[playerId];
+
+    // Rule: Cancel/remove any previous timeout penalty entries for this player in the current round
+    const timeoutEntriesInRound = this.game.scores.filter(
+      (sc) => sc.playerId === playerId && sc.roundNumber === currentRound.number && sc.source === 'timeout'
+    );
+
+    if (timeoutEntriesInRound.length > 0) {
+      const cancelledTimeoutPoints = timeoutEntriesInRound.reduce((acc, sc) => acc + sc.points, 0);
+      roundState.roundPoints = Math.max(0, roundState.roundPoints - cancelledTimeoutPoints);
+
+      // Remove timeout entries from game.scores
+      this.game.scores = this.game.scores.filter(
+        (sc) => !(sc.playerId === playerId && sc.roundNumber === currentRound.number && sc.source === 'timeout')
+      );
+
+      this.logEvent(
+        'GAME_ERROR',
+        `Se anulan ${cancelledTimeoutPoints} pts de timeout previos en la Ronda ${currentRound.number} para ${player?.name} al aplicar Error de Juego.`,
+        playerId,
+        currentRound.number
+      );
+    }
 
     // Apply +150 points penalty
     const penaltyPoints = this.game.settings.gameErrorPenalty;
@@ -302,8 +326,8 @@ export class RummyEngine {
     this.game.scores.push(scoreEntry);
 
     // Mark player as out_by_error for the rest of this round
-    currentRound.playerStates[playerId].status = 'out_by_error';
-    currentRound.playerStates[playerId].roundPoints += penaltyPoints;
+    roundState.status = 'out_by_error';
+    roundState.roundPoints += penaltyPoints;
 
     this.logEvent(
       'GAME_ERROR',
@@ -489,6 +513,7 @@ export class RummyEngine {
   /**
    * Calculate cumulative scores per player across all rounds.
    * Lower points = higher position.
+   * Rule: Timeout penalty entries in a round are omitted if player has a game_error in that same round.
    */
   public getCumulativeScores(): { player: Player; totalPoints: number; rank: number }[] {
     const totals: Record<string, number> = {};
@@ -496,8 +521,20 @@ export class RummyEngine {
       totals[p.id] = 0;
     });
 
+    // Identify rounds where player has a game_error
+    const gameErrorRoundsPerPlayer = new Set<string>();
+    this.game.scores.forEach((sc) => {
+      if (sc.source === 'game_error') {
+        gameErrorRoundsPerPlayer.add(`${sc.playerId}_r${sc.roundNumber}`);
+      }
+    });
+
     this.game.scores.forEach((sc) => {
       if (totals[sc.playerId] !== undefined) {
+        // Skip timeout if game_error exists in same round
+        if (sc.source === 'timeout' && gameErrorRoundsPerPlayer.has(`${sc.playerId}_r${sc.roundNumber}`)) {
+          return;
+        }
         totals[sc.playerId] += sc.points;
       }
     });

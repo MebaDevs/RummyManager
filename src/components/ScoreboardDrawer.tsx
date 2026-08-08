@@ -55,6 +55,7 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
       {/* Edge Flap Tab Button */}
       <button
         onClick={onToggle}
+        className="scoreboard-flap-btn"
         style={{
           position: 'fixed',
           right: isOpen ? 380 : 0,

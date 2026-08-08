@@ -40,7 +40,13 @@ src/
 
 ---
 
-## 📋 Reglas de Juego e Infracciones (Rummy)
+## 🃏 Rondas Oficiales de Rummy (6 Rondas)
+1. **Ronda 1:** 1 Terna + 1 Escalera
+2. **Ronda 2:** 3 Ternas
+3. **Ronda 3:** 2 Ternas + 1 Escalera
+4. **Ronda 4:** 2 Escaleras
+5. **Ronda 5:** 2 Escaleras + 1 Terna
+6. **Ronda 6:** 3 Escaleras (Cierre de partida)
 
 1. **Temporizador de Turno:**
    - Tiempo de turno configurable (por defecto 120s).

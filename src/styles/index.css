@@ -226,6 +226,10 @@ h1, h2, h3, h4, .font-display {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .badge-purple {
@@ -270,6 +274,19 @@ h1, h2, h3, h4, .font-display {
   display: none !important;
 }
 
+/* Header Info Strip Layout */
+.header-info-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.mobile-scoreboard-toggle {
+  display: none !important;
+}
+
 /* Central Timer Table Layout Rules */
 .central-timer-layout {
   display: grid;
@@ -277,12 +294,37 @@ h1, h2, h3, h4, .font-display {
   gap: 20px;
   align-items: center;
   margin: 16px 0 24px 0;
+  width: 100%;
+}
+
+.main-app-content {
+  width: calc(100% - 260px);
+  max-width: calc(100% - 260px);
+  min-width: 0;
 }
 
 /* Touch & Mobile Accessibility Optimizations */
 @media (max-width: 900px) {
   .mobile-header {
     display: flex !important;
+  }
+  .active-game-container {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .header-info-container {
+    order: 1 !important;
+    display: block !important;
+    margin-bottom: 16px !important;
+  }
+  .desktop-only-card {
+    display: none !important;
+  }
+  .mobile-scoreboard-toggle {
+    display: inline-flex !important;
+  }
+  .round-card-main {
+    width: 100% !important;
   }
   .sidebar-drawer {
     transform: translateX(-100%);
@@ -293,28 +335,43 @@ h1, h2, h3, h4, .font-display {
   }
   .main-app-content {
     margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .btn {
     min-height: 44px;
   }
 
   .central-timer-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: contents !important;
   }
   .timer-center-box {
-    order: -1;
-    width: 100%;
+    order: 2 !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+  .bottom-toolbar-container {
+    order: 3 !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
   }
   .players-column-desktop {
     display: none !important;
   }
   .players-grid-mobile {
+    order: 4 !important;
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 12px;
-    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+  .round-winner-btn-container {
+    order: 5 !important;
+    width: 100% !important;
+  }
+  .scoreboard-flap-btn {
+    display: none !important;
   }
 }
 
@@ -329,6 +386,9 @@ h1, h2, h3, h4, .font-display {
   .btn-lg {
     padding: 12px 20px;
     font-size: 15px;
+  }
+  .players-grid-mobile {
+    grid-template-columns: 1fr !important;
   }
 }
 

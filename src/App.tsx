@@ -102,7 +102,6 @@ export const AppLayout: React.FC = () => {
             flexDirection: 'column',
             minHeight: '100vh',
             transition: 'margin-left 0.3s ease',
-            width: '100%',
           }}
         >
           <main style={{ flex: 1 }}>

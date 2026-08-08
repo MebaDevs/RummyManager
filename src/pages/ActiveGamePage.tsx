@@ -5,14 +5,17 @@ import { CentralTimerTable } from '../components/CentralTimerTable';
 import { BottomToolbar } from '../components/BottomToolbar';
 import { ScoreboardDrawer } from '../components/ScoreboardDrawer';
 import { RoundSummaryModal } from '../components/RoundSummaryModal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { usePreciseTimer } from '../hooks/usePreciseTimer';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
 import { useRummyEngine } from '../hooks/useRummyEngine';
 
 export const ActiveGamePage: React.FC = () => {
-  const { activeGame, updateGameState, setCurrentPage } = useGame();
+  const { activeGame, updateGameState, quitCurrentGame, setCurrentPage } = useGame();
   const [isScoreboardOpen, setIsScoreboardOpen] = useState(false);
   const [isRoundModalOpen, setIsRoundModalOpen] = useState(false);
+  const [showErrorConfirmModal, setShowErrorConfirmModal] = useState(false);
+  const [showQuitConfirmModal, setShowQuitConfirmModal] = useState(false);
 
   // Hook connecting pure TS GameEngine with React state
   const {
@@ -59,6 +62,7 @@ export const ActiveGamePage: React.FC = () => {
   }
 
   const activeTurnPlayerId = game.currentTurn?.playerId || game.players[0]?.id || '';
+  const activeTurnPlayer = game.players.find((p) => p.id === activeTurnPlayerId);
 
   const handleToggleScoreboard = () => {
     setIsScoreboardOpen(!isScoreboardOpen);
@@ -75,10 +79,16 @@ export const ActiveGamePage: React.FC = () => {
     updateGameState(updated);
   };
 
-  const handleGameError = () => {
+  const handleConfirmGameError = () => {
+    setShowErrorConfirmModal(false);
     globalAudioNotifier.playGameErrorChime();
     const updated = registerGameError(activeTurnPlayerId);
     updateGameState(updated);
+  };
+
+  const handleConfirmQuitMatch = async () => {
+    setShowQuitConfirmModal(false);
+    await quitCurrentGame();
   };
 
   const handleFinishRoundAction = (winnerPlayerId: string, handPointsMap: Record<string, number>) => {
@@ -93,10 +103,11 @@ export const ActiveGamePage: React.FC = () => {
 
   return (
     <div
+      className="active-game-container"
       style={{
         maxWidth: 1280,
         margin: '0 auto',
-        padding: '24px 24px 40px 24px',
+        padding: '16px 16px 32px 16px',
         position: 'relative',
       }}
     >
@@ -115,15 +126,17 @@ export const ActiveGamePage: React.FC = () => {
       />
 
       {/* 5. Barra Inferior de Botones de Acción (Bottom Control Toolbar) */}
-      <BottomToolbar
-        isPaused={timerState.isPaused}
-        onEndTurn={handleEndTurn}
-        onTogglePause={handleTogglePause}
-        onGameError={handleGameError}
-      />
+      <div className="bottom-toolbar-container">
+        <BottomToolbar
+          isPaused={timerState.isPaused}
+          onEndTurn={handleEndTurn}
+          onTogglePause={handleTogglePause}
+          onGameError={() => setShowErrorConfirmModal(true)}
+        />
+      </div>
 
       {/* Extra Round Completion Action */}
-      <div style={{ textAlign: 'center', marginTop: 12 }}>
+      <div className="round-winner-btn-container" style={{ textAlign: 'center', marginTop: 12 }}>
         <button
           onClick={() => setIsRoundModalOpen(true)}
           className="btn btn-secondary btn-sm"
@@ -148,6 +161,30 @@ export const ActiveGamePage: React.FC = () => {
         onClose={() => setIsRoundModalOpen(false)}
         onFinishRound={handleFinishRoundAction}
         onStartNextRound={handleStartNextRoundAction}
+      />
+
+      {/* Confirmation Modal for +150 Game Error */}
+      <ConfirmationModal
+        isOpen={showErrorConfirmModal}
+        title="⚠️ Sanción Error de Juego (+150 pts)"
+        message={`¿Confirmas aplicar +150 puntos de penalización a "${activeTurnPlayer?.name || 'Jugador'}" y sacarlo de la ronda actual?`}
+        confirmText="Aplicar +150 y Excluir"
+        cancelText="Cancelar"
+        isDanger={true}
+        onConfirm={handleConfirmGameError}
+        onCancel={() => setShowErrorConfirmModal(false)}
+      />
+
+      {/* Confirmation Modal for Quitting Match */}
+      <ConfirmationModal
+        isOpen={showQuitConfirmModal}
+        title="Finalizar Partida Actual"
+        message="¿Estás seguro de que deseas abandonar la partida en curso? Toda la puntuación acumulada se guardará en el historial."
+        confirmText="Finalizar Partida"
+        cancelText="Volver al juego"
+        isDanger={true}
+        onConfirm={handleConfirmQuitMatch}
+        onCancel={() => setShowQuitConfirmModal(false)}
       />
     </div>
   );

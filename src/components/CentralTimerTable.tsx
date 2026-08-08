@@ -14,10 +14,17 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
   activePlayerId,
   timerState,
 }) => {
-  // Dynamically split all players evenly between Left and Right columns
-  const halfCount = Math.max(1, Math.ceil(players.length / 2));
-  const leftPlayers = players.slice(0, halfCount);
-  const rightPlayers = players.slice(halfCount);
+  // Always sort players so the active player is at position 0 (first)
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (a.id === activePlayerId) return -1;
+    if (b.id === activePlayerId) return 1;
+    return 0;
+  });
+
+  // Dynamically split sorted players between Left and Right columns
+  const halfCount = Math.max(1, Math.ceil(sortedPlayers.length / 2));
+  const leftPlayers = sortedPlayers.slice(0, halfCount);
+  const rightPlayers = sortedPlayers.slice(halfCount);
 
   // SVG Circumference calculation: 2 * PI * 92 ~= 578
   const circumference = 578;
@@ -40,7 +47,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
         key={player.id}
         className="glass-panel"
         style={{
-          padding: '16px 18px',
+          padding: '14px 16px',
           borderColor: isActive ? timerColor : 'var(--panel-border)',
           boxShadow: isActive ? `0 0 20px ${timerColor}66` : 'none',
           background: isActive ? `${timerColor}10` : 'var(--bg-card)',
@@ -48,8 +55,8 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
           width: '100%',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <div
               style={{
                 width: 34,
@@ -63,12 +70,13 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
                 color: '#000',
                 fontSize: 14,
                 boxShadow: `0 0 10px ${player.avatarColor}`,
+                flexShrink: 0,
               }}
             >
               {player.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h4 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>{player.name}</h4>
+            <div style={{ minWidth: 0 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</h4>
               <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Clock size={11} /> 03:15 total
               </span>
@@ -79,11 +87,12 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
           {isActive ? (
             <span
               className={`badge ${timerState.isOverdue ? 'badge-red pulse-warning' : timerState.isWarning ? 'badge-amber pulse-warning' : 'badge-green'}`}
+              style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               {timerState.isOverdue ? 'TIEMPO EXCEDIDO' : 'TURNO'}
             </span>
           ) : isOut ? (
-            <span className="badge badge-red">FUERA</span>
+            <span className="badge badge-red" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>FUERA</span>
           ) : (
             <span
               style={{
@@ -92,6 +101,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
                 borderRadius: '50%',
                 background: 'var(--text-muted)',
                 display: 'inline-block',
+                flexShrink: 0,
               }}
             />
           )}
@@ -116,25 +126,17 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 1fr) minmax(280px, 320px) minmax(220px, 1fr)',
-        gap: 24,
-        alignItems: 'center',
-        margin: '16px 0 28px 0',
-      }}
-    >
-      {/* Left Players Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+    <div className="central-timer-layout">
+      {/* Desktop Left Players Column */}
+      <div className="players-column-desktop" style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
         {leftPlayers.map(renderPlayerCard)}
       </div>
 
       {/* Center Circular Timer Table */}
       <div
-        className="glass-panel"
+        className="glass-panel timer-center-box"
         style={{
-          padding: '28px 20px',
+          padding: '24px 16px',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -149,8 +151,8 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
         </span>
 
         {/* Circular Progress SVG */}
-        <div style={{ position: 'relative', width: 220, height: 220, margin: '6px 0' }}>
-          <svg width="220" height="220" viewBox="0 0 220 220">
+        <div style={{ position: 'relative', width: 200, height: 200, margin: '4px 0', maxWidth: '100%' }}>
+          <svg width="100%" height="100%" viewBox="0 0 220 220" style={{ maxWidth: 220 }}>
             <circle cx="110" cy="110" r="92" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
             <circle
               cx="110"
@@ -179,7 +181,7 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
             <span
               className="font-mono"
               style={{
-                fontSize: timerState.isOverdue ? 38 : 44,
+                fontSize: timerState.isOverdue ? 'clamp(28px, 6vw, 38px)' : 'clamp(32px, 8vw, 44px)',
                 fontWeight: 800,
                 color: timerColor,
                 lineHeight: 1,
@@ -240,9 +242,14 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
         )}
       </div>
 
-      {/* Right Players Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 520, overflowY: 'auto', paddingLeft: 4 }}>
+      {/* Desktop Right Players Column */}
+      <div className="players-column-desktop" style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 520, overflowY: 'auto', paddingLeft: 4 }}>
         {rightPlayers.map(renderPlayerCard)}
+      </div>
+
+      {/* Mobile/Tablet Combined Players Grid (Active Player ALWAYS first) */}
+      <div className="players-grid-mobile">
+        {sortedPlayers.map(renderPlayerCard)}
       </div>
     </div>
   );
