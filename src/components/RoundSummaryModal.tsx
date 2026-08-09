@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Trophy, CheckCircle, ArrowRight, X } from 'lucide-react';
 import { Game } from '../domain/models';
 import confetti from 'canvas-confetti';
@@ -22,8 +22,12 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
 }) => {
   const currentRound = game.rounds[game.currentRoundIndex];
   const [winnerId, setWinnerId] = useState<string>(game.players[0]?.id || '');
-  const [handPoints, setHandPoints] = useState<Record<string, number>>({});
+  const [handPoints, setHandPoints] = useState<Record<string, string>>({});
   const [step, setStep] = useState<'select_winner' | 'enter_points' | 'summary'>('select_winner');
+
+  // Refs for Tab / mobile-Next focus management
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useModalBackHandler(isOpen, onClose);
 
@@ -36,24 +40,58 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
     setWinnerId(pid);
     setStep('enter_points');
 
-    // Initialize hand points for non-winner players
-    const initialPoints: Record<string, number> = {};
+    // Initialize hand points for non-winner players (empty string = not yet entered)
+    const initialPoints: Record<string, string> = {};
     activePlayers.forEach((p) => {
       if (p.id !== pid) {
-        initialPoints[p.id] = 0;
+        initialPoints[p.id] = '';
       }
     });
     setHandPoints(initialPoints);
   };
 
-  const handlePointChange = (pid: string, val: number) => {
+  const handlePointChange = (pid: string, raw: string) => {
+    // Allow only digits (no letters, no minus, no decimals)
+    const digits = raw.replace(/\D/g, '');
     setHandPoints({
       ...handPoints,
-      [pid]: Math.max(0, val),
+      [pid]: digits,
     });
   };
 
+  // Active players who need to enter points (not winner, not out_by_error)
+  const pointsPlayers = activePlayers.filter((p) => {
+    const isWinner = p.id === winnerId;
+    const isOut = currentRound.playerStates[p.id]?.status === 'out_by_error';
+    return !isWinner && !isOut;
+  });
+
+  // Confirm is enabled only when every points-player has a value > 0
+  const canConfirm = pointsPlayers.every((p) => {
+    const val = handPoints[p.id];
+    return val !== '' && val !== undefined && Number(val) > 0;
+  });
+
+  // Move focus to the next empty input (in pointsPlayers order) or to the confirm button
+  const focusNextEmptyOrButton = (currentPid: string) => {
+    const currentIdx = pointsPlayers.findIndex((p) => p.id === currentPid);
+    // Search from next position, wrapping around
+    for (let offset = 1; offset <= pointsPlayers.length; offset++) {
+      const idx = (currentIdx + offset) % pointsPlayers.length;
+      const candidate = pointsPlayers[idx];
+      const val = handPoints[candidate.id];
+      if (!val || Number(val) === 0) {
+        inputRefs.current[candidate.id]?.focus();
+        return;
+      }
+    }
+    // All filled → focus confirm button
+    confirmBtnRef.current?.focus();
+  };
+
   const handleSubmitRoundScores = () => {
+    if (!canConfirm) return;
+
     globalAudioNotifier.playVictoryFanfare();
     confetti({
       particleCount: 80,
@@ -61,7 +99,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
       origin: { y: 0.6 },
     });
 
-    onFinishRound(winnerId, handPoints);
+    // Convert string values to numbers for the engine
+    const numericPoints: Record<string, number> = {};
+    Object.entries(handPoints).forEach(([pid, val]) => {
+      numericPoints[pid] = Number(val) || 0;
+    });
+
+    onFinishRound(winnerId, numericPoints);
     setStep('summary');
   };
 
@@ -269,17 +313,34 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                     <span style={{ fontWeight: 600 }}>{p.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input
-                        type="number"
-                        min="0"
-                        max="500"
-                        value={handPoints[p.id] ?? 0}
-                        onChange={(e) => handlePointChange(p.id, Number(e.target.value))}
+                        ref={(el) => { inputRefs.current[p.id] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="—"
+                        maxLength={4}
+                        enterKeyHint={canConfirm ? 'done' : 'next'}
+                        value={handPoints[p.id] ?? ''}
+                        onChange={(e) => handlePointChange(p.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Tab') {
+                            e.preventDefault();
+                            focusNextEmptyOrButton(p.id);
+                          } else if (e.key === 'Enter') {
+                            if (canConfirm) handleSubmitRoundScores();
+                            else focusNextEmptyOrButton(p.id);
+                          }
+                        }}
                         style={{
                           width: 80,
                           padding: '8px 12px',
                           borderRadius: 'var(--radius-sm)',
                           background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--panel-border)',
+                          border: `1px solid ${
+                            !handPoints[p.id] || Number(handPoints[p.id]) === 0
+                              ? 'var(--status-amber)'
+                              : 'var(--status-green)'
+                          }`,
                           color: '#fff',
                           textAlign: 'center',
                           fontSize: 16,
@@ -293,9 +354,24 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               })}
             </div>
 
-            <button onClick={handleSubmitRoundScores} className="btn btn-success btn-lg" style={{ width: '100%' }}>
+            <button
+              ref={confirmBtnRef}
+              onClick={handleSubmitRoundScores}
+              disabled={!canConfirm}
+              className="btn btn-success btn-lg"
+              style={{
+                width: '100%',
+                opacity: canConfirm ? 1 : 0.45,
+                cursor: canConfirm ? 'pointer' : 'not-allowed',
+              }}
+            >
               <CheckCircle size={20} /> Confirmar Puntuaciones de Ronda
             </button>
+            {!canConfirm && (
+              <p style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: 'var(--status-amber)' }}>
+                ⚠️ Todos los jugadores deben tener puntos mayores a 0
+              </p>
+            )}
           </div>
         )}
 
