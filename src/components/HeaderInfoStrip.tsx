@@ -2,16 +2,26 @@ import React from 'react';
 import { Clock, ShieldAlert, BarChart3, X, User } from 'lucide-react';
 import { Game } from '../domain/models';
 
+import { Wifi } from 'lucide-react';
+
 interface HeaderInfoStripProps {
   game: Game;
   isScoreboardOpen: boolean;
   onToggleScoreboard: () => void;
+  p2pRole?: 'host' | 'guest' | 'none';
+  roomCode?: string;
+  connectedPeersCount?: number;
+  onOpenP2PModal?: () => void;
 }
 
 export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
   game,
   isScoreboardOpen,
   onToggleScoreboard,
+  p2pRole = 'none',
+  roomCode = '',
+  connectedPeersCount = 0,
+  onOpenP2PModal,
 }) => {
   const currentRound = game.rounds[game.currentRoundIndex] || game.rounds[0];
   const activePlayer = game.players[0]; // Active player
@@ -45,28 +55,30 @@ export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
             </h3>
           </div>
 
-          {/* Botón de Puntuación Integrado para Móvil (Solo Icono) */}
-          <button
-            onClick={onToggleScoreboard}
-            className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'} mobile-scoreboard-toggle`}
-            style={{
-              width: 38,
-              height: 38,
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-md)',
-              flexShrink: 0,
-            }}
-            title={isScoreboardOpen ? 'Ocultar Puntuación' : 'Ver Puntuación'}
-            aria-label="Puntuación"
-          >
-            {isScoreboardOpen ? <X size={20} /> : <BarChart3 size={20} />}
-          </button>
+          {/* Botón de Puntuación Integrado para Móvil (Solo para Host / Local) */}
+          {p2pRole !== 'guest' && (
+            <button
+              onClick={onToggleScoreboard}
+              className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'} mobile-scoreboard-toggle`}
+              style={{
+                width: 38,
+                height: 38,
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 'var(--radius-md)',
+                flexShrink: 0,
+              }}
+              title={isScoreboardOpen ? 'Ocultar Puntuación' : 'Ver Puntuación'}
+              aria-label="Puntuación"
+            >
+              {isScoreboardOpen ? <X size={20} /> : <BarChart3 size={20} />}
+            </button>
+          )}
         </div>
 
-        <div style={{ width: '100%', overflow: 'hidden' }}>
+        <div style={{ width: '100%', overflow: 'hidden', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span
             className="badge badge-purple"
             style={{
@@ -83,6 +95,32 @@ export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
           >
             🃏 {currentRound?.objective.name.split(':')[1] || currentRound?.objective.name}
           </span>
+
+          {onOpenP2PModal && (
+            <button
+              onClick={onOpenP2PModal}
+              style={{
+                background: p2pRole !== 'none' ? 'rgba(53, 229, 138, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                border: `1px solid ${p2pRole !== 'none' ? 'var(--status-green)' : 'var(--panel-border)'}`,
+                color: p2pRole !== 'none' ? 'var(--status-green)' : 'var(--text-secondary)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '4px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Wifi size={14} />
+              {p2pRole === 'host'
+                ? `Sala: ${roomCode} (${connectedPeersCount})`
+                : p2pRole === 'guest'
+                ? `Conectado (${roomCode})`
+                : 'Conectar Celulares'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -156,25 +194,27 @@ export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Jugador fuera de la ronda</span>
       </div>
 
-      {/* 5. Acción Superior Derecha - Toggle Scoreboard Drawer (Solo Desktop) */}
-      <div
-        className="glass-panel desktop-only-card"
-        style={{
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <button
-          onClick={onToggleScoreboard}
-          className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'}`}
-          style={{ width: '100%', height: '100%', borderRadius: 'var(--radius-md)' }}
+      {/* 5. Acción Superior Derecha - Toggle Scoreboard Drawer (Solo Host / Local) */}
+      {p2pRole !== 'guest' && (
+        <div
+          className="glass-panel desktop-only-card"
+          style={{
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          {isScoreboardOpen ? <X size={18} /> : <BarChart3 size={18} />}
-          <span>{isScoreboardOpen ? 'Ocultar puntuación' : 'Ver puntuación'}</span>
-        </button>
-      </div>
+          <button
+            onClick={onToggleScoreboard}
+            className={`btn ${isScoreboardOpen ? 'btn-secondary' : 'btn-primary'}`}
+            style={{ width: '100%', height: '100%', borderRadius: 'var(--radius-md)' }}
+          >
+            {isScoreboardOpen ? <X size={18} /> : <BarChart3 size={18} />}
+            <span>{isScoreboardOpen ? 'Ocultar puntuación' : 'Ver puntuación'}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

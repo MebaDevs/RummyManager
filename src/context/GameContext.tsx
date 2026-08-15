@@ -7,6 +7,8 @@ import { RummyEngine } from '../domain/engine/RummyEngine';
 
 export type PageView = 'home' | 'new_game' | 'active_game' | 'history' | 'settings';
 
+export type PeerRole = 'host' | 'guest' | 'none';
+
 interface GameContextType {
   currentPage: PageView;
   setCurrentPage: (page: PageView) => void;
@@ -20,7 +22,22 @@ interface GameContextType {
   createNewGame: (players: Player[], settings: GameSettings, customRounds?: RoundObjective[]) => Promise<Game>;
   updateGameState: (updatedGame: Game) => Promise<void>;
   quitCurrentGame: () => Promise<void>;
+  // P2P Fields and Methods
+  p2pRole: PeerRole;
+  roomCode: string;
+  connectedPeersCount: number;
+  lobbyPlayers: Player[];
+  createP2PRoom: (customCode?: string) => Promise<string>;
+  joinP2PRoom: (code: string, playerName: string) => Promise<void>;
+  leaveP2PRoom: () => void;
+  addLocalPlayerToLobby: (name: string) => void;
+  removePlayerFromLobby: (playerId: string) => void;
+  reorderLobbyPlayers: (newOrderedIds: string[]) => void;
+  startP2PGameFromLobby: (settings?: GameSettings, customRounds?: RoundObjective[]) => Promise<Game>;
+  dispatchP2PAction: (type: import('../infrastructure/p2p/PeerRoomService').PeerActionType, payload?: any) => void;
 }
+
+import { globalPeerRoomService, PeerActionType } from '../infrastructure/p2p/PeerRoomService';
 
 const repository = new LocalGameRepository();
 const engine = new RummyEngine();
@@ -29,8 +46,23 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentPage, setCurrentPageRaw] = useState<PageView>('home');
-  const [activeGame, setActiveGame] = useState<Game | null>(null);
+  const [activeGame, setActiveGameRaw] = useState<Game | null>(null);
+  const activeGameRef = React.useRef<Game | null>(activeGame);
   const [globalSettings, setGlobalSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
+
+  const setActiveGame = (game: Game | null) => {
+    activeGameRef.current = game;
+    setActiveGameRaw(game);
+  };
+
+  // P2P Room & Lobby State
+  const [p2pRole, setP2pRole] = useState<PeerRole>('none');
+  const [roomCode, setRoomCode] = useState<string>('');
+  const [connectedPeersCount, setConnectedPeersCount] = useState<number>(0);
+  const [lobbyPlayers, setLobbyPlayers] = useState<Player[]>([]);
+
+  // Avatar color palette for players
+  const avatarColors = ['#9b5cff', '#35e58a', '#ffc83d', '#ff5365', '#48a7ff', '#ff943d'];
 
   const setCurrentPage = (page: PageView, pushHistory = true) => {
     setCurrentPageRaw(page);
@@ -69,6 +101,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateGameState = async (updatedGame: Game) => {
     setActiveGame(updatedGame);
     await repository.saveGame(updatedGame);
+
+    // If host, broadcast state to all guests
+    if (p2pRole === 'host') {
+      globalPeerRoomService.broadcastState(updatedGame);
+    }
   };
 
   const createNewGame = async (
@@ -83,6 +120,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await repository.saveGame(startedGame);
     setActiveGame(startedGame);
     setCurrentPage('active_game');
+
+    // If host, broadcast new game to all guests
+    if (p2pRole === 'host') {
+      globalPeerRoomService.broadcastState(startedGame);
+    }
+
     return startedGame;
   };
 
@@ -94,10 +137,186 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updatedAt: new Date().toISOString(),
       };
       await repository.saveGame(updatedGame);
+      if (p2pRole === 'host') {
+        globalPeerRoomService.broadcastState(updatedGame);
+      }
     }
     await repository.clearActiveGame();
     setActiveGame(null);
     setCurrentPage('home');
+  };
+
+  // --- P2P ROOM & LOBBY METHODS ---
+
+  const createP2PRoom = async (customCode?: string): Promise<string> => {
+    const code = customCode || globalPeerRoomService.constructor.prototype.constructor.generateRoomCode();
+
+    const createdCode = await globalPeerRoomService.createRoom(code, {
+      onGuestJoinLobby: (guest) => {
+        // Host receives a guest joining the lobby
+        setLobbyPlayers((prev) => {
+          if (prev.some((p) => p.name.toLowerCase() === guest.name.toLowerCase())) {
+            return prev; // Avoid duplicate names
+          }
+          const newPlayer: Player = {
+            id: `p_p2p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            name: guest.name.trim(),
+            avatarColor: guest.color || avatarColors[prev.length % avatarColors.length],
+            isInitialPlayer: prev.length === 0,
+          };
+          const updatedList = [...prev, newPlayer];
+          globalPeerRoomService.broadcastLobbyState({
+            lobbyPlayers: updatedList,
+            isGameStarted: !!activeGame && activeGame.status !== 'finished',
+          });
+          return updatedList;
+        });
+      },
+      onGuestAction: (action, senderPlayerId) => {
+        const currentGame = activeGameRef.current;
+        if (!currentGame) return;
+        const currentEngine = new RummyEngine(currentGame);
+        let updated: Game | null = null;
+
+        switch (action.type) {
+          case 'FINISH_TURN':
+            updated = currentEngine.finishTurn();
+            break;
+          case 'TOGGLE_PAUSE':
+            updated = currentEngine.togglePause();
+            break;
+          case 'REGISTER_ERROR':
+            updated = currentEngine.registerGameError(action.payload?.targetPlayerId || senderPlayerId);
+            break;
+          case 'FINISH_ROUND':
+            updated = currentEngine.finishRound(action.payload.winnerPlayerId, action.payload.handPointsMap);
+            break;
+          case 'START_NEXT_ROUND':
+            updated = currentEngine.startNextRound();
+            break;
+          case 'REORDER_PLAYERS':
+            updated = currentEngine.reorderPlayers(action.payload.newOrderedIds);
+            break;
+          case 'TIMEOUT_TURN':
+            updated = currentEngine.timeoutTurn();
+            break;
+        }
+
+        if (updated) {
+          updateGameState(updated);
+        }
+      },
+      onConnectionChange: (count) => {
+        setConnectedPeersCount(count);
+      },
+    });
+
+    setP2pRole('host');
+    setRoomCode(createdCode);
+
+    return createdCode;
+  };
+
+  const joinP2PRoom = async (code: string, playerName: string): Promise<void> => {
+    await globalPeerRoomService.joinRoom(code, {
+      onLobbyUpdate: (lobbyInfo) => {
+        setLobbyPlayers(lobbyInfo.lobbyPlayers);
+      },
+      onStateUpdate: (remoteGame) => {
+        setActiveGame(remoteGame);
+        setCurrentPage('active_game', false);
+      },
+      onConnectionChange: (count) => {
+        setConnectedPeersCount(count);
+      },
+    });
+
+    setP2pRole('guest');
+    setRoomCode(code.toUpperCase());
+
+    // Send player name to host
+    globalPeerRoomService.sendJoinLobby(playerName);
+  };
+
+  const addLocalPlayerToLobby = (name: string) => {
+    if (!name.trim()) return;
+    setLobbyPlayers((prev) => {
+      const newPlayer: Player = {
+        id: `p_local_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: name.trim(),
+        avatarColor: avatarColors[prev.length % avatarColors.length],
+        isInitialPlayer: prev.length === 0,
+      };
+      const updated = [...prev, newPlayer];
+      if (p2pRole === 'host') {
+        globalPeerRoomService.broadcastLobbyState({
+          lobbyPlayers: updated,
+          isGameStarted: !!activeGame && activeGame.status !== 'finished',
+        });
+      }
+      return updated;
+    });
+  };
+
+  const removePlayerFromLobby = (playerId: string) => {
+    setLobbyPlayers((prev) => {
+      const updated = prev.filter((p) => p.id !== playerId);
+      if (p2pRole === 'host') {
+        globalPeerRoomService.broadcastLobbyState({
+          lobbyPlayers: updated,
+          isGameStarted: !!activeGame && activeGame.status !== 'finished',
+        });
+      }
+      return updated;
+    });
+  };
+
+  const reorderLobbyPlayers = (newOrderedIds: string[]) => {
+    setLobbyPlayers((prev) => {
+      const map = new Map(prev.map((p) => [p.id, p]));
+      const reordered: Player[] = [];
+      newOrderedIds.forEach((id) => {
+        const p = map.get(id);
+        if (p) reordered.push(p);
+      });
+      // Add any missing
+      prev.forEach((p) => {
+        if (!newOrderedIds.includes(p.id)) reordered.push(p);
+      });
+      if (p2pRole === 'host') {
+        globalPeerRoomService.broadcastLobbyState({
+          lobbyPlayers: reordered,
+          isGameStarted: !!activeGame && activeGame.status !== 'finished',
+        });
+      }
+      return reordered;
+    });
+  };
+
+  const startP2PGameFromLobby = async (
+    settings?: GameSettings,
+    customRounds?: RoundObjective[]
+  ): Promise<Game> => {
+    if (lobbyPlayers.length < 2) {
+      throw new Error('Se requieren al menos 2 jugadores para iniciar la partida.');
+    }
+    const finalSettings = settings || globalSettings;
+    const game = await createNewGame(lobbyPlayers, finalSettings, customRounds);
+    return game;
+  };
+
+  const leaveP2PRoom = () => {
+    globalPeerRoomService.destroy();
+    setP2pRole('none');
+    setRoomCode('');
+    setConnectedPeersCount(0);
+    setLobbyPlayers([]);
+  };
+
+  const dispatchP2PAction = (type: PeerActionType, payload?: any) => {
+    if (p2pRole === 'guest') {
+      globalPeerRoomService.sendActionToHost(type, payload);
+    }
   };
 
   return (
@@ -115,6 +334,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         createNewGame,
         updateGameState,
         quitCurrentGame,
+        p2pRole,
+        roomCode,
+        connectedPeersCount,
+        lobbyPlayers,
+        createP2PRoom,
+        joinP2PRoom,
+        leaveP2PRoom,
+        addLocalPlayerToLobby,
+        removePlayerFromLobby,
+        reorderLobbyPlayers,
+        startP2PGameFromLobby,
+        dispatchP2PAction,
       }}
     >
       {children}

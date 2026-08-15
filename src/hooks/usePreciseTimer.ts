@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Turn } from '../domain/models';
+import { globalPeerRoomService } from '../infrastructure/p2p/PeerRoomService';
 
 interface PreciseTimerOptions {
   currentTurn: Turn | null;
@@ -58,7 +59,8 @@ export function usePreciseTimer({
       };
     }
 
-    const now = Date.now();
+    const clockOffset = globalPeerRoomService.getClockOffset();
+    const now = Date.now() - clockOffset;
     const limitMs = timeLimitSeconds * 1000;
     let elapsedMs = currentTurn.accumulatedMs;
 

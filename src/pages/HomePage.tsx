@@ -1,12 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Play, PlusCircle, History, ShieldCheck, Zap, Clock, Trophy, RotateCcw, Trash2 } from 'lucide-react';
+import { Play, PlusCircle, History, ShieldCheck, Zap, Clock, Trophy, RotateCcw, Trash2, Wifi } from 'lucide-react';
+import { JoinRoomModal } from '../components/JoinRoomModal';
+import { CreateRoomModal } from '../components/CreateRoomModal';
 
 export const HomePage: React.FC = () => {
-  const { setCurrentPage, activeGame, quitCurrentGame } = useGame();
+  const {
+    setCurrentPage,
+    activeGame,
+    quitCurrentGame,
+    joinP2PRoom,
+    createP2PRoom,
+    p2pRole,
+    roomCode,
+    connectedPeersCount,
+    lobbyPlayers,
+    addLocalPlayerToLobby,
+    removePlayerFromLobby,
+    reorderLobbyPlayers,
+    startP2PGameFromLobby,
+  } = useGame();
+
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const isGameActive = activeGame && activeGame.status !== 'finished';
   const activeRound = isGameActive ? activeGame.rounds[activeGame.currentRoundIndex] : null;
+
+  const handleCreateP2PLobby = async () => {
+    try {
+      await createP2PRoom();
+      setIsCreateModalOpen(true);
+    } catch (err) {
+      console.error('Failed to create P2P room:', err);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px' }}>
@@ -88,8 +116,14 @@ export const HomePage: React.FC = () => {
           </p>
 
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <button onClick={() => setCurrentPage('new_game')} className="btn btn-primary btn-lg">
-              <PlusCircle size={20} /> Crear Nueva Partida
+            <button onClick={handleCreateP2PLobby} className="btn btn-primary btn-lg">
+              <Wifi size={20} /> Crear Sala (Multidispositivo)
+            </button>
+            <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary btn-lg" style={{ borderColor: 'var(--status-green)', color: 'var(--status-green)' }}>
+              <Wifi size={20} /> Unirse a Sala (Código)
+            </button>
+            <button onClick={() => setCurrentPage('new_game')} className="btn btn-secondary btn-lg">
+              <PlusCircle size={20} /> Partida Local Un-Dispositivo
             </button>
             <button onClick={() => setCurrentPage('history')} className="btn btn-secondary btn-lg">
               <History size={20} /> Ver Historial
@@ -97,6 +131,36 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Host Lobby Modal */}
+      <CreateRoomModal
+        isOpen={isCreateModalOpen}
+        roomCode={roomCode}
+        connectedCount={connectedPeersCount}
+        lobbyPlayers={lobbyPlayers}
+        isHost={p2pRole === 'host'}
+        onClose={() => setIsCreateModalOpen(false)}
+        onAddLocalPlayer={addLocalPlayerToLobby}
+        onRemovePlayer={removePlayerFromLobby}
+        onReorderPlayers={reorderLobbyPlayers}
+        onStartGame={async () => {
+          try {
+            await startP2PGameFromLobby();
+            setIsCreateModalOpen(false);
+          } catch (err: any) {
+            alert(err.message || 'Error al iniciar la partida');
+          }
+        }}
+      />
+
+      {/* Guest Join Modal */}
+      <JoinRoomModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onJoinRoom={async (code, name) => {
+          await joinP2PRoom(code, name);
+        }}
+      />
 
       {/* Feature Highlights Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>

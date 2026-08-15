@@ -7,11 +7,11 @@ export function useRummyEngine(initialGame?: Game | null) {
   const [gameState, setGameState] = useState<Game>(() => engineRef.current.getGame());
 
   useEffect(() => {
-    if (initialGame && initialGame.id !== gameState.id) {
+    if (initialGame && (initialGame.id !== gameState.id || initialGame.updatedAt !== gameState.updatedAt)) {
       engineRef.current = new RummyEngine(initialGame);
       setGameState(engineRef.current.getGame());
     }
-  }, [initialGame?.id]);
+  }, [initialGame?.id, initialGame?.updatedAt]);
 
   useEffect(() => {
     const unsubscribe = engineRef.current.subscribe((updatedGame) => {

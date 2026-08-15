@@ -6,6 +6,7 @@ import { NewGamePage } from './pages/NewGamePage';
 import { ActiveGamePage } from './pages/ActiveGamePage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { JoinRoomModal } from './components/JoinRoomModal';
 import { Menu, X, Flame, Maximize, Minimize } from 'lucide-react';
 import './styles/index.css';
 
@@ -37,9 +38,22 @@ const MainContent: React.FC = () => {
 export const AppLayout: React.FC = () => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { setCurrentPage } = useGame();
+  const [prefilledRoomCode, setPrefilledRoomCode] = useState<string>('');
+  const [isUrlJoinModalOpen, setIsUrlJoinModalOpen] = useState(false);
+  const { setCurrentPage, joinP2PRoom } = useGame();
 
   useEffect(() => {
+    // Check if user arrived via share URL ?room=XXXX
+    const params = new URLSearchParams(window.location.search);
+    const urlRoom = params.get('room');
+    if (urlRoom && urlRoom.trim()) {
+      const cleanCode = urlRoom.trim().toUpperCase();
+      setPrefilledRoomCode(cleanCode);
+      setIsUrlJoinModalOpen(true);
+      // Clean query string from browser address bar
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
@@ -172,6 +186,14 @@ export const AppLayout: React.FC = () => {
           </footer>
         </div>
       </div>
+      <JoinRoomModal
+        isOpen={isUrlJoinModalOpen}
+        initialCode={prefilledRoomCode}
+        onClose={() => setIsUrlJoinModalOpen(false)}
+        onJoinRoom={async (code, name) => {
+          await joinP2PRoom(code, name);
+        }}
+      />
     </div>
   );
 };

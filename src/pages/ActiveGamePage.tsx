@@ -11,15 +11,37 @@ import { GameFinishedModal } from '../components/GameFinishedModal';
 import { usePreciseTimer } from '../hooks/usePreciseTimer';
 import { globalAudioNotifier } from '../infrastructure/audio/WebAudioNotifier';
 import { useRummyEngine } from '../hooks/useRummyEngine';
-import { Users, Trophy } from 'lucide-react';
+import { CreateRoomModal } from '../components/CreateRoomModal';
+import { JoinRoomModal } from '../components/JoinRoomModal';
+import { Users, Trophy, Wifi } from 'lucide-react';
 
 export const ActiveGamePage: React.FC = () => {
-  const { activeGame, updateGameState, quitCurrentGame, setCurrentPage } = useGame();
+  const {
+    activeGame,
+    updateGameState,
+    quitCurrentGame,
+    setCurrentPage,
+    p2pRole,
+    roomCode,
+    connectedPeersCount,
+    lobbyPlayers,
+    createP2PRoom,
+    joinP2PRoom,
+    addLocalPlayerToLobby,
+    removePlayerFromLobby,
+    reorderLobbyPlayers,
+    dispatchP2PAction,
+  } = useGame();
+
   const [isScoreboardOpen, setIsScoreboardOpen] = useState(false);
   const [isRoundModalOpen, setIsRoundModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [showErrorConfirmModal, setShowErrorConfirmModal] = useState(false);
   const [showQuitConfirmModal, setShowQuitConfirmModal] = useState(false);
+
+  // P2P Modals
+  const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
+  const [isJoinRoomOpen, setIsJoinRoomOpen] = useState(false);
 
   // Hook connecting pure TS GameEngine with React state
   const {
@@ -45,8 +67,10 @@ export const ActiveGamePage: React.FC = () => {
     playWarningSound: () => globalAudioNotifier.playWarningBeep(),
     playTimeoutSound: () => globalAudioNotifier.playTimeoutBuzzer(),
     onTimeout: () => {
-      const updated = timeoutTurn();
-      updateGameState(updated);
+      if (p2pRole !== 'guest') {
+        const updated = timeoutTurn();
+        updateGameState(updated);
+      }
     },
   });
 
@@ -75,20 +99,32 @@ export const ActiveGamePage: React.FC = () => {
 
   const handleEndTurn = () => {
     globalAudioNotifier.playTick();
-    const updated = finishTurn();
-    updateGameState(updated);
+    if (p2pRole === 'guest') {
+      dispatchP2PAction('FINISH_TURN');
+    } else {
+      const updated = finishTurn();
+      updateGameState(updated);
+    }
   };
 
   const handleTogglePause = () => {
-    const updated = togglePause();
-    updateGameState(updated);
+    if (p2pRole === 'guest') {
+      dispatchP2PAction('TOGGLE_PAUSE');
+    } else {
+      const updated = togglePause();
+      updateGameState(updated);
+    }
   };
 
   const handleConfirmGameError = () => {
     setShowErrorConfirmModal(false);
     globalAudioNotifier.playGameErrorChime();
-    const updated = registerGameError(activeTurnPlayerId);
-    updateGameState(updated);
+    if (p2pRole === 'guest') {
+      dispatchP2PAction('REGISTER_ERROR', { targetPlayerId: activeTurnPlayerId });
+    } else {
+      const updated = registerGameError(activeTurnPlayerId);
+      updateGameState(updated);
+    }
   };
 
   const handleConfirmQuitMatch = async () => {
@@ -104,24 +140,51 @@ export const ActiveGamePage: React.FC = () => {
 
   const handleOpenDeclareWinner = () => {
     scrollToTop();
-    // Auto-pause the timer while scores are being entered
     if (game.status === 'playing') {
-      const updated = togglePause();
-      updateGameState(updated);
+      if (p2pRole === 'guest') {
+        dispatchP2PAction('TOGGLE_PAUSE');
+      } else {
+        const updated = togglePause();
+        updateGameState(updated);
+      }
     }
     setIsRoundModalOpen(true);
   };
 
   const handleFinishRoundAction = (winnerPlayerId: string, handPointsMap: Record<string, number>) => {
     scrollToTop();
-    const updated = finishRound(winnerPlayerId, handPointsMap);
-    updateGameState(updated);
+    if (p2pRole === 'guest') {
+      dispatchP2PAction('FINISH_ROUND', { winnerPlayerId, handPointsMap });
+    } else {
+      const updated = finishRound(winnerPlayerId, handPointsMap);
+      updateGameState(updated);
+    }
   };
 
   const handleStartNextRoundAction = () => {
     scrollToTop();
-    const updated = startNextRound();
-    updateGameState(updated);
+    if (p2pRole === 'guest') {
+      dispatchP2PAction('START_NEXT_ROUND');
+    } else {
+      const updated = startNextRound();
+      updateGameState(updated);
+    }
+  };
+
+  const handleOpenP2PModal = async () => {
+    if (p2pRole === 'host') {
+      setIsCreateRoomOpen(true);
+    } else if (p2pRole === 'guest') {
+      setIsJoinRoomOpen(true);
+    } else {
+      // Create room as host
+      try {
+        await createP2PRoom();
+        setIsCreateRoomOpen(true);
+      } catch (err) {
+        console.error('Error creating P2P room:', err);
+      }
+    }
   };
 
   return (
@@ -139,6 +202,10 @@ export const ActiveGamePage: React.FC = () => {
         game={game}
         isScoreboardOpen={isScoreboardOpen}
         onToggleScoreboard={handleToggleScoreboard}
+        p2pRole={p2pRole}
+        roomCode={roomCode}
+        connectedPeersCount={connectedPeersCount}
+        onOpenP2PModal={handleOpenP2PModal}
       />
 
       {/* 4. Mesa Central de Juego (Área Principal con Temporizador SVG) */}
@@ -153,29 +220,47 @@ export const ActiveGamePage: React.FC = () => {
       <div className="bottom-toolbar-container">
         <BottomToolbar
           isPaused={timerState.isPaused}
+          isGuest={p2pRole === 'guest'}
           onEndTurn={handleEndTurn}
           onTogglePause={handleTogglePause}
           onGameError={() => setShowErrorConfirmModal(true)}
         />
       </div>
 
-      {/* Extra Actions Bar (Round Winner & Reorder Players) */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 12, marginBottom: 16, flexWrap: 'wrap', width: '100%' }}>
-        <button
-          onClick={handleOpenDeclareWinner}
-          className="btn btn-secondary"
-          style={{ flex: '1 1 140px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
-        >
-          <Trophy size={16} color="var(--status-amber)" /> Declarar Ganador
-        </button>
-        <button
-          onClick={() => setIsReorderModalOpen(true)}
-          className="btn btn-secondary"
-          style={{ flex: '1 1 140px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
-        >
-          <Users size={16} color="var(--accent-purple)" /> Reordenar Asientos
-        </button>
-      </div>
+      {/* Extra Actions Bar (Solo para Host / Local) */}
+      {p2pRole !== 'guest' && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 12, marginBottom: 16, flexWrap: 'wrap', width: '100%' }}>
+          <button
+            onClick={handleOpenDeclareWinner}
+            className="btn btn-secondary"
+            style={{ flex: '1 1 130px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
+          >
+            <Trophy size={16} color="var(--status-amber)" /> Declarar Ganador
+          </button>
+          <button
+            onClick={() => setIsReorderModalOpen(true)}
+            className="btn btn-secondary"
+            style={{ flex: '1 1 130px', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: 13 }}
+          >
+            <Users size={16} color="var(--accent-purple)" /> Reordenar Asientos
+          </button>
+          <button
+            onClick={handleOpenP2PModal}
+            className="btn btn-secondary"
+            style={{
+              flex: '1 1 130px',
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 13,
+              borderColor: p2pRole !== 'none' ? 'var(--status-green)' : 'var(--panel-border)',
+              color: p2pRole !== 'none' ? 'var(--status-green)' : '#fff',
+            }}
+          >
+            <Wifi size={16} color={p2pRole !== 'none' ? 'var(--status-green)' : 'var(--status-amber)'} />
+            {p2pRole === 'host' ? `Sala: ${roomCode}` : 'Conectar Móviles'}
+          </button>
+        </div>
+      )}
 
       {/* 6. Panel Lateral Desplegable (Tabla de Puntuación - Right Drawer) */}
       <ScoreboardDrawer
@@ -191,8 +276,12 @@ export const ActiveGamePage: React.FC = () => {
         players={game.players}
         onClose={() => setIsReorderModalOpen(false)}
         onSaveOrder={(newIds) => {
-          const updated = reorderPlayers(newIds);
-          updateGameState(updated);
+          if (p2pRole === 'guest') {
+            dispatchP2PAction('REORDER_PLAYERS', { newOrderedIds: newIds });
+          } else {
+            const updated = reorderPlayers(newIds);
+            updateGameState(updated);
+          }
         }}
       />
 
@@ -209,6 +298,7 @@ export const ActiveGamePage: React.FC = () => {
       <GameFinishedModal
         isOpen={game.status === 'finished'}
         game={game}
+        isGuest={p2pRole === 'guest'}
         onNewGame={() => setCurrentPage('new_game')}
         onGoHome={() => setCurrentPage('home')}
       />
@@ -235,6 +325,28 @@ export const ActiveGamePage: React.FC = () => {
         isDanger={true}
         onConfirm={handleConfirmQuitMatch}
         onCancel={() => setShowQuitConfirmModal(false)}
+      />
+
+      {/* Modales de Sala Multidispositivo P2P */}
+      <CreateRoomModal
+        isOpen={isCreateRoomOpen}
+        roomCode={roomCode}
+        connectedCount={connectedPeersCount}
+        lobbyPlayers={lobbyPlayers}
+        isHost={p2pRole === 'host'}
+        onClose={() => setIsCreateRoomOpen(false)}
+        onAddLocalPlayer={addLocalPlayerToLobby}
+        onRemovePlayer={removePlayerFromLobby}
+        onReorderPlayers={reorderLobbyPlayers}
+        onStartGame={() => setIsCreateRoomOpen(false)}
+      />
+
+      <JoinRoomModal
+        isOpen={isJoinRoomOpen}
+        onClose={() => setIsJoinRoomOpen(false)}
+        onJoinRoom={async (code, name) => {
+          await joinP2PRoom(code, name);
+        }}
       />
     </div>
   );
