@@ -30,6 +30,7 @@ export const ActiveGamePage: React.FC = () => {
     addLocalPlayerToLobby,
     removePlayerFromLobby,
     reorderLobbyPlayers,
+    resetP2PGameToLobby,
     dispatchP2PAction,
   } = useGame();
 
@@ -311,7 +312,14 @@ export const ActiveGamePage: React.FC = () => {
         isOpen={game.status === 'finished'}
         game={game}
         isGuest={p2pRole === 'guest'}
-        onNewGame={() => setCurrentPage('new_game')}
+        onNewGame={async () => {
+          if (p2pRole === 'host') {
+            await resetP2PGameToLobby();
+            setIsCreateRoomOpen(true);
+          } else {
+            setCurrentPage('new_game');
+          }
+        }}
         onGoHome={() => setCurrentPage('home')}
       />
 

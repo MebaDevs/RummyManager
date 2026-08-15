@@ -34,6 +34,7 @@ interface GameContextType {
   removePlayerFromLobby: (playerId: string) => void;
   reorderLobbyPlayers: (newOrderedIds: string[]) => void;
   startP2PGameFromLobby: (settings?: GameSettings, customRounds?: RoundObjective[]) => Promise<Game>;
+  resetP2PGameToLobby: () => Promise<void>;
   dispatchP2PAction: (type: import('../infrastructure/p2p/PeerRoomService').PeerActionType, payload?: any) => void;
 }
 
@@ -305,6 +306,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await globalPeerRoomService.joinRoom(code, {
       onLobbyUpdate: (lobbyInfo) => {
         setLobbyPlayers(lobbyInfo.lobbyPlayers);
+        if (!lobbyInfo.isGameStarted) {
+          setActiveGame(null);
+        }
       },
       onStateUpdate: (remoteGame) => {
         setActiveGame(remoteGame);
@@ -390,6 +394,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return game;
   };
 
+  const resetP2PGameToLobby = async () => {
+    await repository.clearActiveGame();
+    setActiveGame(null);
+    if (p2pRole === 'host') {
+      globalPeerRoomService.broadcastLobbyState({
+        lobbyPlayers: lobbyPlayersRef.current,
+        isGameStarted: false,
+      });
+    }
+  };
+
   const leaveP2PRoom = () => {
     if (p2pRole === 'guest') {
       globalPeerRoomService.sendLeaveLobby();
@@ -435,6 +450,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         removePlayerFromLobby,
         reorderLobbyPlayers,
         startP2PGameFromLobby,
+        resetP2PGameToLobby,
         dispatchP2PAction,
       }}
     >

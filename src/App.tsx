@@ -6,6 +6,7 @@ import { NewGamePage } from './pages/NewGamePage';
 import { ActiveGamePage } from './pages/ActiveGamePage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { CreateRoomModal } from './components/CreateRoomModal';
 import { JoinRoomModal } from './components/JoinRoomModal';
 import { GuestLobbyView } from './components/GuestLobbyView';
 import { Menu, X, Flame, Maximize, Minimize } from 'lucide-react';
@@ -14,12 +15,18 @@ import './styles/index.css';
 const MainContent: React.FC = () => {
   const {
     currentPage,
+    setCurrentPage,
     p2pRole,
     activeGame,
+    setActiveGame,
     roomCode,
     lobbyPlayers,
     connectedPeersCount,
     leaveP2PRoom,
+    addLocalPlayerToLobby,
+    removePlayerFromLobby,
+    reorderLobbyPlayers,
+    startP2PGameFromLobby,
   } = useGame();
 
   React.useEffect(() => {
@@ -35,6 +42,31 @@ const MainContent: React.FC = () => {
         lobbyPlayers={lobbyPlayers}
         connectedCount={connectedPeersCount}
         onLeaveRoom={leaveP2PRoom}
+      />
+    );
+  }
+
+  if (p2pRole === 'host' && (!activeGame || activeGame.status === 'setup')) {
+    return (
+      <CreateRoomModal
+        isOpen={true}
+        roomCode={roomCode}
+        connectedCount={connectedPeersCount}
+        lobbyPlayers={lobbyPlayers}
+        isHost={true}
+        onClose={leaveP2PRoom}
+        onAddLocalPlayer={addLocalPlayerToLobby}
+        onRemovePlayer={removePlayerFromLobby}
+        onReorderPlayers={reorderLobbyPlayers}
+        onStartGame={async () => {
+          try {
+            const startedGame = await startP2PGameFromLobby();
+            setActiveGame(startedGame);
+            setCurrentPage('active_game');
+          } catch (err: any) {
+            alert(err.message || 'Error al iniciar la partida');
+          }
+        }}
       />
     );
   }
