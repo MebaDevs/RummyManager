@@ -104,6 +104,11 @@ export const ActiveGamePage: React.FC = () => {
 
   const handleOpenDeclareWinner = () => {
     scrollToTop();
+    // Auto-pause the timer while scores are being entered
+    if (game.status === 'playing') {
+      const updated = togglePause();
+      updateGameState(updated);
+    }
     setIsRoundModalOpen(true);
   };
 

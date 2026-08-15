@@ -228,7 +228,7 @@ export const PastGameDetailModal: React.FC<PastGameDetailModalProps> = ({
 
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15 }}>{sp.player.name}</div>
-                        {idx === 0 && (
+                        {idx === 0 && game.status === 'finished' && (
                           <span style={{ fontSize: 11, color: 'var(--status-amber)', fontWeight: 700 }}>
                             GANADOR DE LA PARTIDA
                           </span>

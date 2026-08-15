@@ -243,7 +243,26 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
         {/* STEP 2: Enter Hand Points for Remaining Players */}
         {step === 'enter_points' && (
           <div>
-            <h4 style={{ fontSize: 16, marginBottom: 6 }}>Puntos de cartas retenidas</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <button
+                onClick={() => setStep('select_winner')}
+                style={{
+                  background: 'none',
+                  border: '1px solid var(--panel-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '4px 10px',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                ← Cambiar ganador
+              </button>
+              <h4 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>Puntos de cartas retenidas</h4>
+            </div>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
               El ganador suma 0 pts. Ingresa el total de cartas para los demás jugadores activos.
             </p>

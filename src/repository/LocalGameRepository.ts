@@ -85,9 +85,33 @@ export class LocalGameRepository implements IGameRepository {
     const summaries = await this.getAllGames();
     const existingIndex = summaries.findIndex((s) => s.id === game.id);
 
-    const winnerPlayer = game.players.find(
-      (p) => p.id === game.rounds[game.rounds.length - 1]?.winnerPlayerId
-    );
+    // For finished games: true winner = player with LOWEST total accumulated points
+    // For in-progress games: show winner of the last completed round
+    let winnerPlayer = undefined;
+    if (game.status === 'finished') {
+      // Replicate getCumulativeScores logic: sum points, skip timeout if game_error in same round
+      const totals: Record<string, number> = {};
+      game.players.forEach((p) => { totals[p.id] = 0; });
+      const gameErrorRoundsPerPlayer = new Set<string>();
+      game.scores.forEach((sc) => {
+        if (sc.source === 'game_error') gameErrorRoundsPerPlayer.add(`${sc.playerId}_r${sc.roundNumber}`);
+      });
+      game.scores.forEach((sc) => {
+        if (totals[sc.playerId] !== undefined) {
+          if (sc.source === 'timeout' && gameErrorRoundsPerPlayer.has(`${sc.playerId}_r${sc.roundNumber}`)) return;
+          totals[sc.playerId] += sc.points;
+        }
+      });
+      const winnerEntry = game.players.reduce(
+        (best, p) => (totals[p.id] < totals[best.id] ? p : best),
+        game.players[0]
+      );
+      winnerPlayer = winnerEntry;
+    } else {
+      // In-progress: show last completed round winner
+      const lastCompleted = [...game.rounds].reverse().find((r) => r.status === 'completed');
+      winnerPlayer = game.players.find((p) => p.id === lastCompleted?.winnerPlayerId);
+    }
 
     const summary: GameSummary = {
       id: game.id,

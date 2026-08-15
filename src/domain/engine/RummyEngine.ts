@@ -146,23 +146,23 @@ export class RummyEngine {
     // Set player state to current_turn
     currentRound.playerStates[initialPlayer.id].status = 'current_turn';
 
-    // Create turn 1
+    // Create turn 1 — starts PAUSED; user must explicitly resume
     const firstTurn: Turn = {
       id: `turn_${Date.now()}_1`,
       roundNumber: 1,
       playerId: initialPlayer.id,
       startedAt: now,
       endedAt: null,
-      pausedAt: null,
+      pausedAt: now,
       accumulatedMs: 0,
       timeLimitMs: this.game.settings.turnTimeLimitSeconds * 1000,
-      status: 'running',
+      status: 'paused',
       penaltyApplied: false,
     };
 
     currentRound.turns.push(firstTurn);
     this.game.currentTurn = firstTurn;
-    this.game.status = 'playing';
+    this.game.status = 'paused';  // Timer does NOT run until user resumes
     this.game.updatedAt = now;
 
     this.logEvent('ROUND_START', `Inicio de la Ronda 1: ${currentRound.objective.name}`, undefined, 1);
@@ -500,22 +500,23 @@ export class RummyEngine {
     const startingPlayerId = this.game.players[startingPlayerIndex].id;
     nextRound.playerStates[startingPlayerId].status = 'current_turn';
 
+    // First turn of new round — starts PAUSED; user must explicitly resume
     const firstTurn: Turn = {
       id: `turn_${Date.now()}_r${nextRound.number}_1`,
       roundNumber: nextRound.number,
       playerId: startingPlayerId,
       startedAt: now,
       endedAt: null,
-      pausedAt: null,
+      pausedAt: now,
       accumulatedMs: 0,
       timeLimitMs: this.game.settings.turnTimeLimitSeconds * 1000,
-      status: 'running',
+      status: 'paused',
       penaltyApplied: false,
     };
 
     nextRound.turns.push(firstTurn);
     this.game.currentTurn = firstTurn;
-    this.game.status = 'playing';
+    this.game.status = 'paused';  // Timer does NOT run until user resumes
     this.game.updatedAt = now;
 
     const startingPlayer = this.game.players.find((p) => p.id === startingPlayerId);
