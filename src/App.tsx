@@ -7,17 +7,37 @@ import { ActiveGamePage } from './pages/ActiveGamePage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { JoinRoomModal } from './components/JoinRoomModal';
+import { GuestLobbyView } from './components/GuestLobbyView';
 import { Menu, X, Flame, Maximize, Minimize } from 'lucide-react';
 import './styles/index.css';
 
 const MainContent: React.FC = () => {
-  const { currentPage } = useGame();
+  const {
+    currentPage,
+    p2pRole,
+    activeGame,
+    roomCode,
+    lobbyPlayers,
+    connectedPeersCount,
+    leaveP2PRoom,
+  } = useGame();
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-  }, [currentPage]);
+  }, [currentPage, p2pRole, activeGame?.status]);
+
+  if (p2pRole === 'guest' && (!activeGame || activeGame.status === 'setup')) {
+    return (
+      <GuestLobbyView
+        roomCode={roomCode}
+        lobbyPlayers={lobbyPlayers}
+        connectedCount={connectedPeersCount}
+        onLeaveRoom={leaveP2PRoom}
+      />
+    );
+  }
 
   switch (currentPage) {
     case 'home':

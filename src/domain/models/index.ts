@@ -15,6 +15,7 @@ export interface Player {
   avatarColor: string;
   avatarIcon?: string;
   isInitialPlayer?: boolean;
+  peerId?: string;
 }
 
 export interface GameSettings {

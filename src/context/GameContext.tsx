@@ -59,7 +59,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [p2pRole, setP2pRole] = useState<PeerRole>('none');
   const [roomCode, setRoomCode] = useState<string>('');
   const [connectedPeersCount, setConnectedPeersCount] = useState<number>(0);
-  const [lobbyPlayers, setLobbyPlayers] = useState<Player[]>([]);
+  const [lobbyPlayers, setLobbyPlayersRaw] = useState<Player[]>([]);
+  const lobbyPlayersRef = React.useRef<Player[]>(lobbyPlayers);
+
+  const setLobbyPlayers: React.Dispatch<React.SetStateAction<Player[]>> = (action) => {
+    setLobbyPlayersRaw((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      lobbyPlayersRef.current = next;
+      return next;
+    });
+  };
 
   // Avatar color palette for players
   const avatarColors = ['#9b5cff', '#35e58a', '#ffc83d', '#ff5365', '#48a7ff', '#ff943d'];
@@ -143,10 +152,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     await repository.clearActiveGame();
     setActiveGame(null);
-    setCurrentPage('home');
+    leaveP2PRoom();
   };
 
   // --- P2P ROOM & LOBBY METHODS ---
+
+  const P2P_SESSION_KEY = 'rummy_p2p_session';
+
+  const saveP2PSession = (role: PeerRole, code: string, playerName?: string) => {
+    localStorage.setItem(P2P_SESSION_KEY, JSON.stringify({ role, roomCode: code, playerName }));
+  };
+
+  const clearP2PSession = () => {
+    localStorage.removeItem(P2P_SESSION_KEY);
+  };
+
+  // Auto-reconnect to P2P room if page was reloaded or closed
+  useEffect(() => {
+    const saved = localStorage.getItem(P2P_SESSION_KEY);
+    if (saved) {
+      try {
+        const session = JSON.parse(saved);
+        if (session.role === 'host' && session.roomCode) {
+          createP2PRoom(session.roomCode).catch((err) => {
+            console.warn('[P2P Restore] Could not restore host room:', err);
+            clearP2PSession();
+          });
+        } else if (session.role === 'guest' && session.roomCode && session.playerName) {
+          joinP2PRoom(session.roomCode, session.playerName).catch((err) => {
+            console.warn('[P2P Restore] Could not rejoin room as guest:', err);
+            clearP2PSession();
+          });
+        }
+      } catch (err) {
+        console.error('[P2P Restore] Error parsing saved P2P session:', err);
+      }
+    }
+  }, []);
 
   const createP2PRoom = async (customCode?: string): Promise<string> => {
     const code = customCode || globalPeerRoomService.constructor.prototype.constructor.generateRoomCode();
@@ -155,22 +197,63 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       onGuestJoinLobby: (guest) => {
         // Host receives a guest joining the lobby
         setLobbyPlayers((prev) => {
-          if (prev.some((p) => p.name.toLowerCase() === guest.name.toLowerCase())) {
-            return prev; // Avoid duplicate names
+          const existingIdx = prev.findIndex(
+            (p) => p.peerId === guest.peerId || p.name.toLowerCase() === guest.name.toLowerCase()
+          );
+          let updatedList: Player[];
+          if (existingIdx !== -1) {
+            updatedList = [...prev];
+            updatedList[existingIdx] = {
+              ...updatedList[existingIdx],
+              peerId: guest.peerId,
+            };
+          } else {
+            const newPlayer: Player = {
+              id: `p_p2p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              name: guest.name.trim(),
+              avatarColor: guest.color || avatarColors[prev.length % avatarColors.length],
+              isInitialPlayer: prev.length === 0,
+              peerId: guest.peerId,
+            };
+            updatedList = [...prev, newPlayer];
           }
-          const newPlayer: Player = {
-            id: `p_p2p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-            name: guest.name.trim(),
-            avatarColor: guest.color || avatarColors[prev.length % avatarColors.length],
-            isInitialPlayer: prev.length === 0,
-          };
-          const updatedList = [...prev, newPlayer];
+
           globalPeerRoomService.broadcastLobbyState({
             lobbyPlayers: updatedList,
-            isGameStarted: !!activeGame && activeGame.status !== 'finished',
+            isGameStarted: !!activeGameRef.current && activeGameRef.current.status !== 'finished',
           });
           return updatedList;
         });
+      },
+      onGuestDisconnect: (peerId) => {
+        if (!activeGameRef.current || activeGameRef.current.status === 'setup') {
+          setLobbyPlayers((prev) => {
+            const updatedList = prev.filter((p) => p.peerId !== peerId);
+            globalPeerRoomService.broadcastLobbyState({
+              lobbyPlayers: updatedList,
+              isGameStarted: false,
+            });
+            return updatedList;
+          });
+        }
+      },
+      onGuestConnect: (conn) => {
+        const currentGame = activeGameRef.current;
+        if (currentGame) {
+          conn.send({
+            type: 'STATE_UPDATE',
+            game: currentGame,
+            hostNow: Date.now(),
+          });
+        } else {
+          conn.send({
+            type: 'LOBBY_STATE',
+            lobbyInfo: {
+              lobbyPlayers: lobbyPlayersRef.current,
+              isGameStarted: false,
+            },
+          });
+        }
       },
       onGuestAction: (action, senderPlayerId) => {
         const currentGame = activeGameRef.current;
@@ -213,6 +296,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setP2pRole('host');
     setRoomCode(createdCode);
+    saveP2PSession('host', createdCode);
 
     return createdCode;
   };
@@ -233,6 +317,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setP2pRole('guest');
     setRoomCode(code.toUpperCase());
+    saveP2PSession('guest', code.toUpperCase(), playerName);
 
     // Send player name to host
     globalPeerRoomService.sendJoinLobby(playerName);
@@ -306,11 +391,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const leaveP2PRoom = () => {
+    if (p2pRole === 'guest') {
+      globalPeerRoomService.sendLeaveLobby();
+    }
     globalPeerRoomService.destroy();
     setP2pRole('none');
     setRoomCode('');
     setConnectedPeersCount(0);
     setLobbyPlayers([]);
+    clearP2PSession();
+    setCurrentPage('home');
   };
 
   const dispatchP2PAction = (type: PeerActionType, payload?: any) => {

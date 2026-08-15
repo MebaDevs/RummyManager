@@ -17,7 +17,7 @@ export interface LobbyInfo {
 }
 
 export interface PeerMessage {
-  type: 'STATE_UPDATE' | 'ACTION' | 'HEARTBEAT' | 'JOIN_INFO' | 'JOIN_LOBBY' | 'LOBBY_STATE';
+  type: 'STATE_UPDATE' | 'ACTION' | 'HEARTBEAT' | 'JOIN_INFO' | 'JOIN_LOBBY' | 'LEAVE_LOBBY' | 'LOBBY_STATE';
   game?: Game;
   hostNow?: number;
   lobbyInfo?: LobbyInfo;
@@ -34,6 +34,8 @@ export interface PeerMessage {
 export type StateUpdateCallback = (game: Game) => void;
 export type LobbyUpdateCallback = (lobbyInfo: LobbyInfo) => void;
 export type GuestJoinLobbyCallback = (player: { name: string; color?: string; peerId: string }) => void;
+export type GuestConnectCallback = (conn: DataConnection) => void;
+export type GuestDisconnectCallback = (peerId: string) => void;
 export type ActionCallback = (action: { type: PeerActionType; payload?: any }, senderPlayerId?: string) => void;
 export type ConnectionStatusCallback = (connectedCount: number, peers: string[]) => void;
 
@@ -50,6 +52,8 @@ export class PeerRoomService {
   private onStateUpdate: StateUpdateCallback | null = null;
   private onLobbyUpdate: LobbyUpdateCallback | null = null;
   private onGuestJoinLobby: GuestJoinLobbyCallback | null = null;
+  private onGuestConnect: GuestConnectCallback | null = null;
+  private onGuestDisconnect: GuestDisconnectCallback | null = null;
   private onGuestAction: ActionCallback | null = null;
   private onConnectionChange: ConnectionStatusCallback | null = null;
   private heartbeatTimer: any = null;
@@ -88,6 +92,8 @@ export class PeerRoomService {
     callbacks: {
       onGuestAction: ActionCallback;
       onGuestJoinLobby?: GuestJoinLobbyCallback;
+      onGuestConnect?: GuestConnectCallback;
+      onGuestDisconnect?: GuestDisconnectCallback;
       onConnectionChange: ConnectionStatusCallback;
     }
   ): Promise<string> {
@@ -97,6 +103,8 @@ export class PeerRoomService {
     this.roomCode = code.toUpperCase().trim();
     this.onGuestAction = callbacks.onGuestAction;
     this.onGuestJoinLobby = callbacks.onGuestJoinLobby || null;
+    this.onGuestConnect = callbacks.onGuestConnect || null;
+    this.onGuestDisconnect = callbacks.onGuestDisconnect || null;
     this.onConnectionChange = callbacks.onConnectionChange;
 
     const peerId = `${PEER_PREFIX}${this.roomCode}`;
@@ -244,6 +252,23 @@ export class PeerRoomService {
   }
 
   /**
+   * Guest sends leave lobby message to host before disconnecting
+   */
+  public sendLeaveLobby(): void {
+    if (this.role !== 'guest' || !this.guestConnection || !this.guestConnection.open) return;
+
+    const msg: PeerMessage = {
+      type: 'LEAVE_LOBBY',
+    };
+
+    try {
+      this.guestConnection.send(msg);
+    } catch (err) {
+      console.warn('[P2P Guest] Error sending leave lobby message:', err);
+    }
+  }
+
+  /**
    * Guest sends an action request to the Host
    */
   public sendActionToHost(type: PeerActionType, payload?: any, playerId?: string): void {
@@ -293,6 +318,9 @@ export class PeerRoomService {
     conn.on('open', () => {
       this.hostConnections.set(conn.peer, conn);
       this.notifyConnectionChange();
+      if (this.onGuestConnect) {
+        this.onGuestConnect(conn);
+      }
     });
 
     conn.on('data', (data) => {
@@ -303,6 +331,12 @@ export class PeerRoomService {
           color: msg.joinPlayerColor,
           peerId: conn.peer,
         });
+      } else if (msg.type === 'LEAVE_LOBBY') {
+        this.hostConnections.delete(conn.peer);
+        this.notifyConnectionChange();
+        if (this.onGuestDisconnect) {
+          this.onGuestDisconnect(conn.peer);
+        }
       } else if (msg.type === 'ACTION' && msg.action && this.onGuestAction) {
         this.onGuestAction(msg.action, msg.senderPlayerId);
       }
@@ -311,11 +345,17 @@ export class PeerRoomService {
     conn.on('close', () => {
       this.hostConnections.delete(conn.peer);
       this.notifyConnectionChange();
+      if (this.onGuestDisconnect) {
+        this.onGuestDisconnect(conn.peer);
+      }
     });
 
     conn.on('error', () => {
       this.hostConnections.delete(conn.peer);
       this.notifyConnectionChange();
+      if (this.onGuestDisconnect) {
+        this.onGuestDisconnect(conn.peer);
+      }
     });
   }
 

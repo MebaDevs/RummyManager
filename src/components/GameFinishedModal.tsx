@@ -184,85 +184,69 @@ export const GameFinishedModal: React.FC<GameFinishedModalProps> = ({
           <Star size={20} color="#ffc83d" fill="#ffc83d" />
         </div>
 
-        {/* Final Rankings (Solo para Host / Local) */}
-        {!isGuest ? (
-          <div
-            style={{
-              background: 'rgba(0,0,0,0.25)',
-              borderRadius: 'var(--radius-md)',
-              padding: '16px',
-              marginBottom: 28,
-              border: '1px solid var(--panel-border)',
-            }}
-          >
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Clasificación Final
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {rankings.map((r, idx) => (
-                <div
-                  key={r.player.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: idx === 0 ? 'rgba(255,200,61,0.08)' : 'transparent',
-                    border: idx === 0 ? '1px solid rgba(255,200,61,0.3)' : '1px solid transparent',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 18, width: 28, textAlign: 'center' }}>
-                      {podiumMedals[idx] || `#${idx + 1}`}
-                    </span>
-                    <div
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: '50%',
-                        background: r.player.avatarColor,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        color: '#000',
-                        fontSize: 11,
-                      }}
-                    >
-                      {r.player.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14 }}>{r.player.name}</span>
-                  </div>
-                  <span
-                    className="font-mono"
+        {/* Final Rankings (Para todos los jugadores) */}
+        <div
+          style={{
+            background: 'rgba(0,0,0,0.25)',
+            borderRadius: 'var(--radius-md)',
+            padding: '16px',
+            marginBottom: 28,
+            border: '1px solid var(--panel-border)',
+          }}
+        >
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Clasificación Final
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rankings.map((r, idx) => (
+              <div
+                key={r.player.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: idx === 0 ? 'rgba(255,200,61,0.08)' : 'transparent',
+                  border: idx === 0 ? '1px solid rgba(255,200,61,0.3)' : '1px solid transparent',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18, width: 28, textAlign: 'center' }}>
+                    {podiumMedals[idx] || `#${idx + 1}`}
+                  </span>
+                  <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: idx === 0 ? '#ffc83d' : 'var(--text-secondary)',
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      background: r.player.avatarColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      color: '#000',
+                      fontSize: 11,
                     }}
                   >
-                    {r.totalPoints} pts
-                  </span>
+                    {r.player.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 14 }}>{r.player.name}</span>
                 </div>
-              ))}
-            </div>
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: idx === 0 ? '#ffc83d' : 'var(--text-secondary)',
+                  }}
+                >
+                  {r.totalPoints} pts
+                </span>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--panel-border)',
-              marginBottom: 28,
-              fontSize: 14,
-              color: 'var(--text-secondary)',
-            }}
-          >
-            🏁 La partida ha concluido. ¡Gracias por participar!
-          </div>
-        )}
+        </div>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 12 }}>
