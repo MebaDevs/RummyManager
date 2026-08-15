@@ -60,7 +60,7 @@ export interface ScoreEntry {
 export interface GameEvent {
   id: string;
   timestamp: string;          // ISO string timestamp
-  type: 'GAME_START' | 'ROUND_START' | 'TURN_START' | 'TURN_END' | 'TIMEOUT' | 'GAME_ERROR' | 'ROUND_END' | 'GAME_END';
+  type: 'GAME_START' | 'ROUND_START' | 'TURN_START' | 'TURN_END' | 'TIMEOUT' | 'GAME_ERROR' | 'ROUND_END' | 'GAME_END' | 'SCORES_UPDATED';
   description: string;
   playerId?: string;
   roundNumber?: number;

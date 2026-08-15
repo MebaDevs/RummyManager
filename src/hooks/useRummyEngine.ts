@@ -60,6 +60,14 @@ export function useRummyEngine(initialGame?: Game | null) {
     return engineRef.current.getCumulativeScores();
   }, []);
 
+  const removeScoreEntry = useCallback((scoreId: string) => {
+    return engineRef.current.removeScoreEntry(scoreId);
+  }, []);
+
+  const clearTimeoutPenalties = useCallback((playerId: string, roundNumber?: number) => {
+    return engineRef.current.clearTimeoutPenalties(playerId, roundNumber);
+  }, []);
+
   return {
     game: gameState,
     engine: engineRef.current,
@@ -72,6 +80,8 @@ export function useRummyEngine(initialGame?: Game | null) {
     finishRound,
     startNextRound,
     reorderPlayers,
+    removeScoreEntry,
+    clearTimeoutPenalties,
     getCumulativeScores,
   };
 }

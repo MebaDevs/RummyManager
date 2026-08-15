@@ -124,75 +124,80 @@ export const HeaderInfoStrip: React.FC<HeaderInfoStripProps> = ({
         </div>
       </div>
 
-      {/* 2. Jugador Actual (Solo Desktop) */}
-      <div
-        className="glass-panel desktop-only-card"
-        style={{
-          padding: '14px 18px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          borderColor: 'rgba(53, 229, 138, 0.3)',
-        }}
-      >
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
-          JUGADOR EN TURNO
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 6px 0' }}>
-          <User size={18} color="var(--status-green)" />
-          <h3 style={{ fontSize: 18, fontWeight: 800 }}>{activePlayer?.name || 'Jugador'}</h3>
-        </div>
-        <span className="badge badge-green" style={{ width: 'fit-content', fontSize: 10 }}>
-          🟢 TU TURNO
-        </span>
-      </div>
+      {/* 2, 3, 4. Jugador, Tiempo y Error de Juego (Solo para Host / Local en Desktop) */}
+      {p2pRole !== 'guest' && (
+        <>
+          {/* 2. Jugador Actual (Solo Desktop) */}
+          <div
+            className="glass-panel desktop-only-card"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              borderColor: 'rgba(53, 229, 138, 0.3)',
+            }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
+              JUGADOR EN TURNO
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 6px 0' }}>
+              <User size={18} color="var(--status-green)" />
+              <h3 style={{ fontSize: 18, fontWeight: 800 }}>{activePlayer?.name || 'Jugador'}</h3>
+            </div>
+            <span className="badge badge-green" style={{ width: 'fit-content', fontSize: 10 }}>
+              🟢 TU TURNO
+            </span>
+          </div>
 
-      {/* 3. Tiempo por Turno (Solo Desktop) */}
-      <div
-        className="glass-panel desktop-only-card"
-        style={{
-          padding: '14px 18px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-      >
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
-          TIEMPO POR TURNO
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 2px 0' }}>
-          <Clock size={18} color="var(--status-amber)" />
-          <span className="font-mono" style={{ fontSize: 18, fontWeight: 800 }}>
-            {timeFormatted}
-          </span>
-        </div>
-        <span style={{ fontSize: 11, color: 'var(--status-amber)' }}>
-          Penalización: +{game.settings.timeoutPenalty} pts
-        </span>
-      </div>
+          {/* 3. Tiempo por Turno (Solo Desktop) */}
+          <div
+            className="glass-panel desktop-only-card"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
+              TIEMPO POR TURNO
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 2px 0' }}>
+              <Clock size={18} color="var(--status-amber)" />
+              <span className="font-mono" style={{ fontSize: 18, fontWeight: 800 }}>
+                {timeFormatted}
+              </span>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--status-amber)' }}>
+              Penalización: +{game.settings.timeoutPenalty} pts
+            </span>
+          </div>
 
-      {/* 4. Error de Juego (Solo Desktop) */}
-      <div
-        className="glass-panel desktop-only-card"
-        style={{
-          padding: '14px 18px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          borderColor: 'rgba(255, 83, 101, 0.3)',
-        }}
-      >
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
-          SANCIÓN ERROR DE JUEGO
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 2px 0' }}>
-          <ShieldAlert size={18} color="var(--status-red)" />
-          <span className="font-mono" style={{ fontSize: 18, fontWeight: 800, color: 'var(--status-red)' }}>
-            +{game.settings.gameErrorPenalty} pts
-          </span>
-        </div>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Jugador fuera de la ronda</span>
-      </div>
+          {/* 4. Error de Juego (Solo Desktop) */}
+          <div
+            className="glass-panel desktop-only-card"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              borderColor: 'rgba(255, 83, 101, 0.3)',
+            }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
+              SANCIÓN ERROR DE JUEGO
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 2px 0' }}>
+              <ShieldAlert size={18} color="var(--status-red)" />
+              <span className="font-mono" style={{ fontSize: 18, fontWeight: 800, color: 'var(--status-red)' }}>
+                +{game.settings.gameErrorPenalty} pts
+              </span>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Jugador fuera de la ronda</span>
+          </div>
+        </>
+      )}
 
       {/* 5. Acción Superior Derecha - Toggle Scoreboard Drawer (Solo Host / Local) */}
       {p2pRole !== 'guest' && (

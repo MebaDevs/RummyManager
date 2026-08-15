@@ -40,7 +40,7 @@ export const AppLayout: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [prefilledRoomCode, setPrefilledRoomCode] = useState<string>('');
   const [isUrlJoinModalOpen, setIsUrlJoinModalOpen] = useState(false);
-  const { setCurrentPage, joinP2PRoom } = useGame();
+  const { setCurrentPage, joinP2PRoom, p2pRole } = useGame();
 
   useEffect(() => {
     // Check if user arrived via share URL ?room=XXXX
@@ -155,15 +155,15 @@ export const AppLayout: React.FC = () => {
       </header>
 
       <div style={{ display: 'flex', flex: 1, width: '100%' }}>
-        {/* Sidebar Drawer */}
-        <Sidebar isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />
+        {/* Sidebar Drawer (Solo Host / Local) */}
+        {p2pRole !== 'guest' && <Sidebar isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />}
 
         {/* Main Content Container */}
         <div
           className="main-app-content"
           style={{
             flex: 1,
-            marginLeft: 260,
+            marginLeft: p2pRole === 'guest' ? 0 : 260,
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100vh',

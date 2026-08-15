@@ -465,6 +465,78 @@ export class RummyEngine {
   }
 
   /**
+   * Remove a specific timeout score entry by ID and deduct its points from the player's round score.
+   */
+  public removeScoreEntry(scoreId: string): Game {
+    const scoreIndex = this.game.scores.findIndex((sc) => sc.id === scoreId);
+    if (scoreIndex === -1) return this.getGame();
+
+    const score = this.game.scores[scoreIndex];
+    if (score.source !== 'timeout') return this.getGame();
+
+    const now = new Date().toISOString();
+    const player = this.game.players.find((p) => p.id === score.playerId);
+    const round = this.game.rounds.find((r) => r.number === score.roundNumber);
+
+    if (round && round.playerStates[score.playerId]) {
+      const state = round.playerStates[score.playerId];
+      state.roundPoints = Math.max(0, state.roundPoints - score.points);
+    }
+
+    this.game.scores.splice(scoreIndex, 1);
+
+    this.logEvent(
+      'SCORES_UPDATED',
+      `🗑️ Se eliminó la penalización por timeout (+${score.points} pts) de ${player?.name || score.playerId} en Ronda ${score.roundNumber}.`,
+      score.playerId,
+      score.roundNumber
+    );
+
+    this.game.updatedAt = now;
+    this.notify();
+    return this.getGame();
+  }
+
+  /**
+   * Remove all timeout penalty score entries for a player in a given round (or current round).
+   */
+  public clearTimeoutPenalties(playerId: string, roundNumber?: number): Game {
+    const targetRoundNum = roundNumber ?? this.game.rounds[this.game.currentRoundIndex]?.number;
+    if (!targetRoundNum) return this.getGame();
+
+    const now = new Date().toISOString();
+    const player = this.game.players.find((p) => p.id === playerId);
+    const round = this.game.rounds.find((r) => r.number === targetRoundNum);
+
+    const timeoutEntries = this.game.scores.filter(
+      (sc) => sc.playerId === playerId && sc.roundNumber === targetRoundNum && sc.source === 'timeout'
+    );
+
+    if (timeoutEntries.length === 0) return this.getGame();
+
+    const totalRemoved = timeoutEntries.reduce((sum, sc) => sum + sc.points, 0);
+
+    if (round && round.playerStates[playerId]) {
+      round.playerStates[playerId].roundPoints = Math.max(0, round.playerStates[playerId].roundPoints - totalRemoved);
+    }
+
+    this.game.scores = this.game.scores.filter(
+      (sc) => !(sc.playerId === playerId && sc.roundNumber === targetRoundNum && sc.source === 'timeout')
+    );
+
+    this.logEvent(
+      'SCORES_UPDATED',
+      `🗑️ Se eliminaron ${totalRemoved} pts de timeout para ${player?.name || playerId} en Ronda ${targetRoundNum}.`,
+      playerId,
+      targetRoundNum
+    );
+
+    this.game.updatedAt = now;
+    this.notify();
+    return this.getGame();
+  }
+
+  /**
    * Start the next round. Reactivates all players who were `out_by_error` in previous round.
    */
   public startNextRound(): Game {

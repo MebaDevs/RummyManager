@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trophy, Medal, ChevronLeft, ChevronRight, ListOrdered, BarChart2, ShieldAlert, Clock, Award } from 'lucide-react';
+import { X, Trophy, Medal, ChevronLeft, ChevronRight, ListOrdered, BarChart2, ShieldAlert, Clock, Award, Trash2 } from 'lucide-react';
 import { Game } from '../domain/models';
 import { useModalBackHandler } from '../hooks/useModalBackHandler';
 
@@ -10,6 +10,8 @@ interface ScoreboardDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onToggle: () => void;
+  onRemoveScoreEntry?: (scoreId: string) => void;
+  onClearTimeoutPenalties?: (playerId: string) => void;
 }
 
 type ScoreTab = 'players' | 'audit' | 'rounds';
@@ -19,6 +21,8 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
   isOpen,
   onClose,
   onToggle,
+  onRemoveScoreEntry,
+  onClearTimeoutPenalties,
 }) => {
   const [activeTab, setActiveTab] = useState<ScoreTab>('players');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -336,9 +340,30 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
 
                 {selectedPlayer && (
                   <div>
-                    <h4 style={{ fontSize: 15, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Auditoría de Puntos: <span style={{ color: 'var(--status-green)' }}>{selectedPlayer.name}</span>
-                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+                      <h4 style={{ fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Auditoría de Puntos: <span style={{ color: 'var(--status-green)' }}>{selectedPlayer.name}</span>
+                      </h4>
+                      {onClearTimeoutPenalties && playerAuditScores.some((sc) => sc.source === 'timeout') && (
+                        <button
+                          onClick={() => onClearTimeoutPenalties(selectedPlayer.id)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: 11,
+                            color: 'var(--status-red)',
+                            borderColor: 'rgba(255, 83, 101, 0.3)',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                          title="Borrar todas las penalizaciones por tiempo de este jugador"
+                        >
+                          <Trash2 size={12} /> Borrar Timeouts
+                        </button>
+                      )}
+                    </div>
 
                     {playerAuditScores.length === 0 ? (
                       <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: 20 }}>
@@ -379,16 +404,37 @@ export const ScoreboardDrawer: React.FC<ScoreboardDrawerProps> = ({
                                 Ronda {sc.roundNumber} · {new Date(sc.createdAt).toLocaleTimeString()}
                               </span>
                             </div>
-                            <span
-                              className="font-mono"
-                              style={{
-                                fontWeight: 800,
-                                fontSize: 14,
-                                color: sc.points > 0 ? (sc.source === 'game_error' ? 'var(--status-red)' : 'var(--status-amber)') : 'var(--status-green)',
-                              }}
-                            >
-                              +{sc.points}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span
+                                className="font-mono"
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: 14,
+                                  color: sc.points > 0 ? (sc.source === 'game_error' ? 'var(--status-red)' : 'var(--status-amber)') : 'var(--status-green)',
+                                }}
+                              >
+                                +{sc.points}
+                              </span>
+                              {sc.source === 'timeout' && onRemoveScoreEntry && (
+                                <button
+                                  onClick={() => onRemoveScoreEntry(sc.id)}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: 11,
+                                    color: 'var(--status-red)',
+                                    borderColor: 'rgba(255, 83, 101, 0.3)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                  title="Borrar penalización de timeout"
+                                >
+                                  <Trash2 size={12} /> Borrar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

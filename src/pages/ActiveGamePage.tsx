@@ -53,6 +53,8 @@ export const ActiveGamePage: React.FC = () => {
     finishRound,
     startNextRound,
     reorderPlayers,
+    removeScoreEntry,
+    clearTimeoutPenalties,
   } = useRummyEngine(activeGame);
 
   // Keep global audio notification settings synced
@@ -191,7 +193,7 @@ export const ActiveGamePage: React.FC = () => {
     <div
       className="active-game-container"
       style={{
-        maxWidth: 1280,
+        maxWidth: p2pRole === 'guest' ? 580 : 1280,
         margin: '0 auto',
         padding: '16px 16px 32px 16px',
         position: 'relative',
@@ -262,13 +264,23 @@ export const ActiveGamePage: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Panel Lateral Desplegable (Tabla de Puntuación - Right Drawer) */}
-      <ScoreboardDrawer
-        game={game}
-        isOpen={isScoreboardOpen}
-        onClose={() => setIsScoreboardOpen(false)}
-        onToggle={handleToggleScoreboard}
-      />
+      {/* 6. Panel Lateral Desplegable (Tabla de Puntuación - Right Drawer) (Solo Host / Local) */}
+      {p2pRole !== 'guest' && (
+        <ScoreboardDrawer
+          game={game}
+          isOpen={isScoreboardOpen}
+          onClose={() => setIsScoreboardOpen(false)}
+          onToggle={handleToggleScoreboard}
+          onRemoveScoreEntry={(scoreId) => {
+            const updated = removeScoreEntry(scoreId);
+            updateGameState(updated);
+          }}
+          onClearTimeoutPenalties={(playerId) => {
+            const updated = clearTimeoutPenalties(playerId);
+            updateGameState(updated);
+          }}
+        />
+      )}
 
       {/* Modal de Reordenamiento de Asientos de Jugadores */}
       <ReorderPlayersModal
