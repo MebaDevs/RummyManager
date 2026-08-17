@@ -56,9 +56,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setActiveGameRaw(game);
   };
 
+  // Helper to read initial P2P session synchronously on mount
+  const getInitialP2PSession = () => {
+    try {
+      const saved = localStorage.getItem('rummy_p2p_session');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  };
+
+  const initialSession = getInitialP2PSession();
+
   // P2P Room & Lobby State
-  const [p2pRole, setP2pRole] = useState<PeerRole>('none');
-  const [roomCode, setRoomCode] = useState<string>('');
+  const [p2pRole, setP2pRole] = useState<PeerRole>(initialSession?.role || 'none');
+  const [roomCode, setRoomCode] = useState<string>(initialSession?.roomCode || '');
   const [connectedPeersCount, setConnectedPeersCount] = useState<number>(0);
   const [lobbyPlayers, setLobbyPlayersRaw] = useState<Player[]>([]);
   const lobbyPlayersRef = React.useRef<Player[]>(lobbyPlayers);
@@ -176,13 +187,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const session = JSON.parse(saved);
         if (session.role === 'host' && session.roomCode) {
           createP2PRoom(session.roomCode).catch((err) => {
-            console.warn('[P2P Restore] Could not restore host room:', err);
-            clearP2PSession();
+            console.warn('[P2P Restore] Host room restore attempt warning:', err);
           });
         } else if (session.role === 'guest' && session.roomCode && session.playerName) {
           joinP2PRoom(session.roomCode, session.playerName).catch((err) => {
-            console.warn('[P2P Restore] Could not rejoin room as guest:', err);
-            clearP2PSession();
+            console.warn('[P2P Restore] Guest room rejoin attempt warning:', err);
           });
         }
       } catch (err) {
@@ -303,21 +312,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const joinP2PRoom = async (code: string, playerName: string): Promise<void> => {
-    await globalPeerRoomService.joinRoom(code, {
-      onLobbyUpdate: (lobbyInfo) => {
-        setLobbyPlayers(lobbyInfo.lobbyPlayers);
-        if (!lobbyInfo.isGameStarted) {
-          setActiveGame(null);
-        }
+    await globalPeerRoomService.joinRoom(
+      code,
+      {
+        onLobbyUpdate: (lobbyInfo) => {
+          setLobbyPlayers(lobbyInfo.lobbyPlayers);
+          if (!lobbyInfo.isGameStarted) {
+            setActiveGame(null);
+          }
+        },
+        onStateUpdate: (remoteGame) => {
+          setActiveGame(remoteGame);
+          setCurrentPage('active_game', false);
+        },
+        onConnectionChange: (count) => {
+          setConnectedPeersCount(count);
+        },
       },
-      onStateUpdate: (remoteGame) => {
-        setActiveGame(remoteGame);
-        setCurrentPage('active_game', false);
-      },
-      onConnectionChange: (count) => {
-        setConnectedPeersCount(count);
-      },
-    });
+      playerName
+    );
 
     setP2pRole('guest');
     setRoomCode(code.toUpperCase());

@@ -57,6 +57,8 @@ export class PeerRoomService {
   private onGuestAction: ActionCallback | null = null;
   private onConnectionChange: ConnectionStatusCallback | null = null;
   private heartbeatTimer: any = null;
+  private reconnectTimer: any = null;
+  private isReconnecting: boolean = false;
   private clockOffset: number = 0;
 
   public getRole(): PeerRole {
@@ -135,7 +137,7 @@ export class PeerRoomService {
   }
 
   /**
-   * Guest joins an existing room by code
+   * Guest joins an existing room by code with automatic reconnect
    */
   public async joinRoom(
     code: string,
@@ -143,7 +145,8 @@ export class PeerRoomService {
       onStateUpdate: StateUpdateCallback;
       onLobbyUpdate?: LobbyUpdateCallback;
       onConnectionChange: ConnectionStatusCallback;
-    }
+    },
+    playerName?: string
   ): Promise<void> {
     this.destroy();
 
@@ -154,24 +157,39 @@ export class PeerRoomService {
     this.onConnectionChange = callbacks.onConnectionChange;
 
     const hostPeerId = `${PEER_PREFIX}${this.roomCode}`;
+    return this.connectGuestToHost(hostPeerId, playerName);
+  }
 
+  private connectGuestToHost(hostPeerId: string, playerName?: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (this.peer && !this.peer.destroyed) {
+        this.peer.destroy();
+      }
+
       this.peer = new Peer({ debug: 1 });
 
       let timeoutTimer: any = setTimeout(() => {
-        reject(new Error('Tiempo de espera agotado. Verifica el código de la sala.'));
-      }, 10000);
+        if (this.role === 'guest') {
+          this.scheduleReconnect(hostPeerId, playerName);
+        }
+        reject(new Error('Tiempo de espera agotado. Intentando reconectar...'));
+      }, 8000);
 
       this.peer.on('open', () => {
-        if (!this.peer) return;
+        if (!this.peer || this.role !== 'guest') return;
         const conn = this.peer.connect(hostPeerId, { reliable: true });
         this.guestConnection = conn;
 
         conn.on('open', () => {
           clearTimeout(timeoutTimer);
+          this.isReconnecting = false;
+          if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
           console.log(`[P2P Guest] Connected to host ${hostPeerId}`);
           if (this.onConnectionChange) this.onConnectionChange(1, [hostPeerId]);
           this.startHeartbeat();
+          if (playerName) {
+            this.sendJoinLobby(playerName);
+          }
           resolve();
         });
 
@@ -180,13 +198,15 @@ export class PeerRoomService {
         });
 
         conn.on('close', () => {
-          console.log('[P2P Guest] Disconnected from host');
+          console.log('[P2P Guest] Disconnected from host, scheduling reconnect...');
           if (this.onConnectionChange) this.onConnectionChange(0, []);
+          this.scheduleReconnect(hostPeerId, playerName);
         });
 
         conn.on('error', (err) => {
           console.error('[P2P Guest] Connection error:', err);
           clearTimeout(timeoutTimer);
+          this.scheduleReconnect(hostPeerId, playerName);
           reject(err);
         });
       });
@@ -194,9 +214,29 @@ export class PeerRoomService {
       this.peer.on('error', (err: any) => {
         console.error('[P2P Guest] Peer error:', err);
         clearTimeout(timeoutTimer);
-        reject(new Error('No se pudo conectar a la sala. Revisa el código.'));
+        this.scheduleReconnect(hostPeerId, playerName);
+        reject(new Error('No se pudo conectar a la sala. Reintentando...'));
       });
     });
+  }
+
+  private scheduleReconnect(hostPeerId: string, playerName?: string) {
+    if (this.role !== 'guest' || !this.roomCode || this.isReconnecting) return;
+
+    this.isReconnecting = true;
+    if (this.onConnectionChange) this.onConnectionChange(0, []);
+
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+
+    this.reconnectTimer = setTimeout(() => {
+      if (this.role === 'guest' && this.roomCode) {
+        console.log(`[P2P Guest] Auto-reconnecting to room ${this.roomCode}...`);
+        this.isReconnecting = false;
+        this.connectGuestToHost(hostPeerId, playerName).catch((err) => {
+          console.warn('[P2P Guest] Reconnect attempt failed:', err);
+        });
+      }
+    }, 2500);
   }
 
   /**
@@ -294,6 +334,13 @@ export class PeerRoomService {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    this.isReconnecting = false;
 
     if (this.guestConnection) {
       this.guestConnection.close();
