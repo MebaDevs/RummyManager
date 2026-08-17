@@ -18,6 +18,7 @@ import { Users, Trophy, Wifi } from 'lucide-react';
 export const ActiveGamePage: React.FC = () => {
   const {
     activeGame,
+    setActiveGame,
     updateGameState,
     quitCurrentGame,
     setCurrentPage,
@@ -104,6 +105,8 @@ export const ActiveGamePage: React.FC = () => {
     globalAudioNotifier.playTick();
     if (p2pRole === 'guest') {
       dispatchP2PAction('FINISH_TURN');
+      const updated = finishTurn();
+      setActiveGame(updated);
     } else {
       const updated = finishTurn();
       updateGameState(updated);
@@ -113,6 +116,8 @@ export const ActiveGamePage: React.FC = () => {
   const handleTogglePause = () => {
     if (p2pRole === 'guest') {
       dispatchP2PAction('TOGGLE_PAUSE');
+      const updated = togglePause();
+      setActiveGame(updated);
     } else {
       const updated = togglePause();
       updateGameState(updated);
@@ -124,6 +129,8 @@ export const ActiveGamePage: React.FC = () => {
     globalAudioNotifier.playGameErrorChime();
     if (p2pRole === 'guest') {
       dispatchP2PAction('REGISTER_ERROR', { targetPlayerId: activeTurnPlayerId });
+      const updated = registerGameError(activeTurnPlayerId);
+      setActiveGame(updated);
     } else {
       const updated = registerGameError(activeTurnPlayerId);
       updateGameState(updated);
