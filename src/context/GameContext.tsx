@@ -123,8 +123,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setActiveGame(updatedGame);
     await repository.saveGame(updatedGame);
 
-    // If host, broadcast state to all guests
-    if (p2pRole === 'host') {
+    // If host, broadcast state to all connected guests
+    if (globalPeerRoomService.getRole() === 'host') {
       globalPeerRoomService.broadcastState(updatedGame);
     }
   };
@@ -143,7 +143,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentPage('active_game');
 
     // If host, broadcast new game to all guests
-    if (p2pRole === 'host') {
+    if (globalPeerRoomService.getRole() === 'host') {
       globalPeerRoomService.broadcastState(startedGame);
     }
 
@@ -158,7 +158,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updatedAt: new Date().toISOString(),
       };
       await repository.saveGame(updatedGame);
-      if (p2pRole === 'host') {
+      if (globalPeerRoomService.getRole() === 'host') {
         globalPeerRoomService.broadcastState(updatedGame);
       }
     }
@@ -350,7 +350,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isInitialPlayer: prev.length === 0,
       };
       const updated = [...prev, newPlayer];
-      if (p2pRole === 'host') {
+      if (globalPeerRoomService.getRole() === 'host') {
         globalPeerRoomService.broadcastLobbyState({
           lobbyPlayers: updated,
           isGameStarted: !!activeGame && activeGame.status !== 'finished',
@@ -363,7 +363,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const removePlayerFromLobby = (playerId: string) => {
     setLobbyPlayers((prev) => {
       const updated = prev.filter((p) => p.id !== playerId);
-      if (p2pRole === 'host') {
+      if (globalPeerRoomService.getRole() === 'host') {
         globalPeerRoomService.broadcastLobbyState({
           lobbyPlayers: updated,
           isGameStarted: !!activeGame && activeGame.status !== 'finished',
@@ -385,7 +385,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       prev.forEach((p) => {
         if (!newOrderedIds.includes(p.id)) reordered.push(p);
       });
-      if (p2pRole === 'host') {
+      if (globalPeerRoomService.getRole() === 'host') {
         globalPeerRoomService.broadcastLobbyState({
           lobbyPlayers: reordered,
           isGameStarted: !!activeGame && activeGame.status !== 'finished',
@@ -410,7 +410,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const resetP2PGameToLobby = async () => {
     await repository.clearActiveGame();
     setActiveGame(null);
-    if (p2pRole === 'host') {
+    if (globalPeerRoomService.getRole() === 'host') {
       globalPeerRoomService.broadcastLobbyState({
         lobbyPlayers: lobbyPlayersRef.current,
         isGameStarted: false,
