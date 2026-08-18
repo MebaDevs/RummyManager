@@ -66,7 +66,7 @@ export function usePreciseTimer({
 
     if (currentTurn.status === 'running' || currentTurn.status === 'timeout') {
       if (currentTurn.startedAt) {
-        const turnStart = new Date(currentTurn.startedAt).getTime();
+        const turnStart = parseIsoTimestamp(currentTurn.startedAt);
         elapsedMs += Math.max(0, now - turnStart);
       }
     }
@@ -79,7 +79,8 @@ export function usePreciseTimer({
     const isOverdue = overdueMs > 0;
     const isWarning = remainingSec <= warningSeconds && remainingSec > 0 && !isExpired;
     const isPaused = currentTurn.status === 'paused';
-    const progressPercent = Math.max(0, Math.min(100, (currentRemainingMs / limitMs) * 100));
+    const rawPercent = limitMs > 0 ? (currentRemainingMs / limitMs) * 100 : 0;
+    const progressPercent = isNaN(rawPercent) ? 100 : Math.max(0, Math.min(100, rawPercent));
 
     // Audio cue checks for countdown warning
     if (isWarning && (currentTurn.status === 'running' || currentTurn.status === 'timeout') && playWarningSound) {
@@ -132,6 +133,15 @@ export function usePreciseTimer({
   }, [calculateState]);
 
   return timerState;
+}
+
+function parseIsoTimestamp(iso: string | null | undefined): number {
+  if (!iso) return Date.now();
+  const parsed = Date.parse(iso);
+  if (!isNaN(parsed)) return parsed;
+  const sanitized = iso.replace(/-/g, '/').replace('T', ' ').replace('Z', '');
+  const fallback = Date.parse(sanitized);
+  return isNaN(fallback) ? Date.now() : fallback;
 }
 
 function formatTime(ms: number): string {

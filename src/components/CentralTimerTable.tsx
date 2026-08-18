@@ -17,17 +17,17 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
   activePlayerId,
   timerState,
 }) => {
-  // Always sort players so the active player is at position 0 (first)
-  const sortedPlayers = [...players].sort((a, b) => {
-    if (a.id === activePlayerId) return -1;
-    if (b.id === activePlayerId) return 1;
-    return 0;
-  });
+  // Cyclic turn rotation ordering: Active player is 1st, followed by next players in sequence
+  const activeIdx = players.findIndex((p) => p.id === activePlayerId);
+  const turnOrderedPlayers =
+    activeIdx !== -1
+      ? [...players.slice(activeIdx), ...players.slice(0, activeIdx)]
+      : players;
 
-  // Dynamically split sorted players between Left and Right columns
-  const halfCount = Math.max(1, Math.ceil(sortedPlayers.length / 2));
-  const leftPlayers = sortedPlayers.slice(0, halfCount);
-  const rightPlayers = sortedPlayers.slice(halfCount);
+  // Dynamically split turn-ordered players between Left and Right columns for Desktop
+  const halfCount = Math.max(1, Math.ceil(turnOrderedPlayers.length / 2));
+  const leftPlayers = turnOrderedPlayers.slice(0, halfCount);
+  const rightPlayers = turnOrderedPlayers.slice(halfCount);
 
   // SVG Circumference calculation: 2 * PI * 92 ~= 578
   const circumference = 578;
@@ -240,9 +240,9 @@ export const CentralTimerTable: React.FC<CentralTimerTableProps> = ({
         {rightPlayers.map(renderPlayerCard)}
       </div>
 
-      {/* Mobile/Tablet Combined Players Grid (Active Player ALWAYS first) */}
+      {/* Mobile/Tablet Combined Players Grid (Active player 1st, then next in turn order sequence) */}
       <div className="players-grid-mobile">
-        {sortedPlayers.map(renderPlayerCard)}
+        {turnOrderedPlayers.map(renderPlayerCard)}
       </div>
     </div>
   );

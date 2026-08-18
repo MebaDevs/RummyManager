@@ -174,10 +174,10 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           >
             <Trophy size={28} />
           </div>
-          <h3 style={{ fontSize: 24, fontWeight: 800 }} className="font-display">
+          <h3 style={{ fontSize: 24, fontWeight: 800, color: '#ffffff' }} className="font-display">
             Cierre de Ronda {currentRound.number}
           </h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+          <p style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 14, fontWeight: 500 }}>
             {currentRound.objective.name}
           </p>
         </div>
@@ -185,12 +185,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
         {/* STEP 1: Select Winner */}
         {step === 'select_winner' && !isRoundAlreadyCompleted && (
           <div>
-            <h4 style={{ fontSize: 16, marginBottom: 14, color: 'var(--text-primary)' }}>
+            <h4 style={{ fontSize: 16, marginBottom: 14, color: '#ffffff', fontWeight: 700 }}>
               ¿Quién ganó la ronda? (Bajó todas sus cartas)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
               {activePlayers.map((p) => {
                 const isOut = currentRound.playerStates[p.id]?.status === 'out_by_error';
+                const isWinner = winnerId === p.id;
                 return (
                   <button
                     key={p.id}
@@ -202,8 +203,8 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                       justifyContent: 'space-between',
                       padding: '14px 18px',
                       borderRadius: 'var(--radius-md)',
-                      background: winnerId === p.id ? 'rgba(53, 229, 138, 0.15)' : 'rgba(255,255,255,0.03)',
-                      border: winnerId === p.id ? '1px solid var(--status-green)' : '1px solid var(--panel-border)',
+                      background: isWinner ? 'rgba(53, 229, 138, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                      border: isWinner ? '2px solid var(--status-green)' : '1px solid rgba(255, 255, 255, 0.15)',
                       cursor: isOut ? 'not-allowed' : 'pointer',
                       opacity: isOut ? 0.5 : 1,
                       textAlign: 'left',
@@ -212,8 +213,8 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
                         style={{
-                          width: 32,
-                          height: 32,
+                          width: 34,
+                          height: 34,
                           borderRadius: '50%',
                           background: p.avatarColor,
                           display: 'flex',
@@ -221,17 +222,18 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                           justifyContent: 'center',
                           color: '#000',
                           fontWeight: 800,
+                          fontSize: 15,
                         }}
                       >
-                        {p.name.charAt(0)}
+                        {p.name.charAt(0).toUpperCase()}
                       </div>
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+                      <span style={{ fontWeight: 700, fontSize: 16, color: '#ffffff' }}>{p.name}</span>
                     </div>
 
                     {isOut ? (
-                      <span className="badge badge-red">FUERA (+150)</span>
+                      <span className="badge badge-red" style={{ fontWeight: 700 }}>FUERA (+150)</span>
                     ) : (
-                      <span className="badge badge-green">Ganador (+0 pts)</span>
+                      <span className="badge badge-green" style={{ fontWeight: 700 }}>Ganador (+0 pts)</span>
                     )}
                   </button>
                 );
@@ -247,12 +249,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               <button
                 onClick={() => setStep('select_winner')}
                 style={{
-                  background: 'none',
-                  border: '1px solid var(--panel-border)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   borderRadius: 'var(--radius-sm)',
-                  color: 'var(--text-secondary)',
+                  color: '#ffffff',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  padding: '4px 10px',
+                  padding: '6px 12px',
                   fontSize: 13,
                   display: 'flex',
                   alignItems: 'center',
@@ -261,9 +264,9 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               >
                 ← Cambiar ganador
               </button>
-              <h4 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>Puntos de cartas retenidas</h4>
+              <h4 style={{ fontSize: 16, margin: 0, color: '#ffffff', fontWeight: 700 }}>Puntos de cartas retenidas</h4>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.75)', marginBottom: 20 }}>
               El ganador suma 0 pts. Ingresa el total de cartas para los demás jugadores activos.
             </p>
 
@@ -277,17 +280,17 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                     <div
                       key={p.id}
                       style={{
-                        padding: '12px 16px',
+                        padding: '14px 18px',
                         borderRadius: 'var(--radius-md)',
-                        background: 'rgba(53, 229, 138, 0.1)',
+                        background: 'rgba(53, 229, 138, 0.15)',
                         border: '1px solid var(--status-green)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span style={{ fontWeight: 700 }}>🏆 {p.name} (Ganador)</span>
-                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--status-green)' }}>
+                      <span style={{ fontWeight: 800, color: '#ffffff', fontSize: 15 }}>🏆 {p.name} (Ganador)</span>
+                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--status-green)', fontSize: 16 }}>
                         0 pts
                       </span>
                     </div>
@@ -299,17 +302,17 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                     <div
                       key={p.id}
                       style={{
-                        padding: '12px 16px',
+                        padding: '14px 18px',
                         borderRadius: 'var(--radius-md)',
-                        background: 'rgba(255, 83, 101, 0.1)',
+                        background: 'rgba(255, 83, 101, 0.15)',
                         border: '1px solid var(--status-red)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span>⚠️ {p.name} (Error de juego)</span>
-                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--status-red)' }}>
+                      <span style={{ fontWeight: 700, color: '#ffffff', fontSize: 15 }}>⚠️ {p.name} (Error de juego)</span>
+                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--status-red)', fontSize: 16 }}>
                         +150 pts
                       </span>
                     </div>
@@ -325,11 +328,11 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                       justifyContent: 'space-between',
                       padding: '12px 16px',
                       borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid var(--panel-border)',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                     }}
                   >
-                    <span style={{ fontWeight: 600 }}>{p.name}</span>
+                    <span style={{ fontWeight: 700, color: '#ffffff', fontSize: 16 }}>{p.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input
                         ref={(el) => { inputRefs.current[p.id] = el; }}
@@ -351,22 +354,22 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                           }
                         }}
                         style={{
-                          width: 80,
-                          padding: '8px 12px',
+                          width: 84,
+                          padding: '10px 12px',
                           borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(0,0,0,0.5)',
-                          border: `1px solid ${
+                          background: '#000000',
+                          border: `2px solid ${
                             !handPoints[p.id] || Number(handPoints[p.id]) === 0
                               ? 'var(--status-amber)'
                               : 'var(--status-green)'
                           }`,
-                          color: '#fff',
+                          color: '#ffffff',
                           textAlign: 'center',
-                          fontSize: 16,
-                          fontWeight: 700,
+                          fontSize: 18,
+                          fontWeight: 800,
                         }}
                       />
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>pts</span>
+                      <span style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.8)', fontWeight: 700 }}>pts</span>
                     </div>
                   </div>
                 );
